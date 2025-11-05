@@ -1,0 +1,100 @@
+#include "device.h"
+
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_vulkan.h>
+#include <VkBootstrap.h>
+#include <print>
+
+renderer::Device::Device( const char* appname )
+{
+	if ( !SDL_Init( SDL_INIT_VIDEO ) )
+	{
+		throw renderer_error( SDL_GetError() );
+	}
+
+	const auto display = SDL_GetPrimaryDisplay();
+	const auto mode = SDL_GetCurrentDisplayMode( display );
+
+	_extent = { .width = static_cast<uint32_t>( mode->w ), .height = static_cast<uint32_t>( mode->h ) };
+	_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN ) );
+	if ( !_window )
+	{
+		throw renderer_error( SDL_GetError() );
+	}
+
+	Uint32 ext_count = 0;
+	const auto exts = SDL_Vulkan_GetInstanceExtensions( &ext_count );
+
+	const auto vk_instance_result = vkb::InstanceBuilder()
+										.set_app_name( "Brutus-ng Vulkan" )
+										.request_validation_layers( true )
+										.use_default_debug_messenger()
+										.require_api_version( 1, 3, 0 )
+										.enable_extensions( ext_count, exts )
+										.build();
+
+	if ( !vk_instance_result )
+	{
+		throw renderer_error( vk_instance_result.error(), vk_instance_result.vk_result() );
+	}
+	_instance = { _context, vk_instance_result.value().instance };
+	_debug_util = { _instance, vk_instance_result.value().debug_messenger };
+
+	VkSurfaceKHR surface {};
+	if ( !SDL_Vulkan_CreateSurface( _window.get(), *_instance, nullptr, &surface ) )
+	{
+		throw renderer_error( SDL_GetError() );
+	}
+
+	_surface = vk::raii::SurfaceKHR( _instance, surface );
+
+	const VkPhysicalDeviceVulkan13Features features13 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+														.synchronization2 = true,
+														.dynamicRendering = true };
+
+	const VkPhysicalDeviceVulkan12Features features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+														.descriptorIndexing = true,
+														.bufferDeviceAddress = true };
+
+	const auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
+										 .set_minimum_version( 1, 3 )
+										 .set_required_features_13( features13 )
+										 .set_required_features_12( features12 )
+										 .set_surface( *_surface )
+										 .select();
+
+	if ( !physical_device_ret )
+	{
+		throw renderer_error( physical_device_ret.error(), physical_device_ret.vk_result() );
+	}
+
+	_physical_device = { _instance, physical_device_ret.value() };
+
+	const auto props = _physical_device.getProperties2();
+	std::println( "Using hardware device: {}", props.properties.deviceName.data() );
+
+	const auto device_ret = vkb::DeviceBuilder( physical_device_ret.value() ).build();
+	if ( !device_ret )
+	{
+		throw renderer_error( device_ret.error(), device_ret.vk_result() );
+	}
+
+	_device = { _physical_device, device_ret.value() };
+	_gfx_queue_family_index = device_ret.value().get_queue_index( vkb::QueueType::graphics ).value();
+	_present_queue_family_index = device_ret.value().get_queue_index( vkb::QueueType::present ).value();
+	_gfx_queue = _device.getQueue( _gfx_queue_family_index, 0 );
+
+	VmaAllocator allocator {};
+	const VmaAllocatorCreateInfo allocatorInfo = {
+		.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+		.physicalDevice = *_physical_device,
+		.device = *_device,
+		.instance = *_instance,
+	};
+	const auto ret = vmaCreateAllocator( &allocatorInfo, &allocator );
+	if ( ret )
+	{
+		throw renderer_error( "Failed to create vma allocator: " + std::to_string( ret ), ret );
+	}
+	_allocator.reset( allocator );
+}
