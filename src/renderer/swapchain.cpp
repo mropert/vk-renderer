@@ -1,9 +1,12 @@
 #include "swapchain.h"
 
 #include <VkBootstrap.h>
+#include <renderer/command_buffer.h>
 #include <renderer/device.h>
+#include <renderer/texture.h>
 
 renderer::Swapchain::Swapchain( Device& device, VkFormat format )
+	: _device( &device )
 {
 	auto swapchain_ret = vkb::SwapchainBuilder( *device._physical_device,
 												*device._device,
@@ -22,4 +25,44 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 	}
 	_swapchain = { device._device, swapchain_ret.value() };
 	_images = _swapchain.getImages();
+
+	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
+	{
+		_frames_data[ i ].render_fence = device._device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
+		_frames_data[ i ].render_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
+		_frames_data[ i ].swapchain_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
+	}
+}
+
+std::tuple<uint32_t, renderer::Texture> renderer::Swapchain::acquire()
+{
+	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
+	_device->_device.waitForFences( *_frames_data[ frame_index ].render_fence, vk::True, UINT64_MAX );
+	const auto [ result, image_index ] = _swapchain.acquireNextImage( UINT64_MAX, _frames_data[ frame_index ].swapchain_semaphore );
+	if ( result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR )
+	{
+		throw renderer_error( "Failed to acquire swapchain image", result );
+	}
+	_current_image = image_index;
+	_device->_device.resetFences( *_frames_data[ frame_index ].render_fence );
+	return std::make_tuple( frame_index, Texture( _images[ image_index ] ) );
+}
+
+void renderer::Swapchain::submit( CommandBuffer& buffer )
+{
+	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
+	const vk::CommandBufferSubmitInfo cmdSubmitInfo( buffer._cmd_buffer );
+	const vk::SemaphoreSubmitInfo waitInfo( _frames_data[ frame_index ].swapchain_semaphore,
+											1,
+											vk::PipelineStageFlagBits2::eColorAttachmentOutput );
+	const vk::SemaphoreSubmitInfo signalInfo( _frames_data[ frame_index ].render_semaphore, 1, vk::PipelineStageFlagBits2::eAllGraphics );
+
+	_device->_gfx_queue.submit2( vk::SubmitInfo2( vk::SubmitFlags(), waitInfo, cmdSubmitInfo, signalInfo ) );
+}
+
+void renderer::Swapchain::present()
+{
+	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
+	_device->_gfx_queue.presentKHR( vk::PresentInfoKHR( _frames_data[ frame_index ].render_semaphore, _swapchain, _current_image ) );
+	++_frame_count;
 }

@@ -94,7 +94,7 @@ renderer::Device::Device( const char* appname )
 	const auto ret = vmaCreateAllocator( &allocatorInfo, &allocator );
 	if ( ret )
 	{
-		throw renderer_error( "Failed to create vma allocator: " + std::to_string( ret ), ret );
+		throw renderer_error( "Failed to create vma allocator", ret );
 	}
 	_allocator.reset( allocator );
 }
