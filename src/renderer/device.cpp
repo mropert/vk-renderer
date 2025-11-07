@@ -4,6 +4,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
 #include <print>
+#include <renderer/command_buffer.h>
 
 renderer::Device::Device( const char* appname )
 {
@@ -97,4 +98,31 @@ renderer::Device::Device( const char* appname )
 		throw renderer_error( "Failed to create vma allocator", ret );
 	}
 	_allocator.reset( allocator );
+
+	_command_pool = _device.createCommandPool( vk::CommandPoolCreateInfo { .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+																		   .queueFamilyIndex = _gfx_queue_family_index } );
+
+	auto buffers = _device.allocateCommandBuffers( vk::CommandBufferAllocateInfo { .commandPool = _command_pool,
+																				   .level = vk::CommandBufferLevel::ePrimary,
+																				   .commandBufferCount = MAX_FRAMES_IN_FLIGHT } );
+	_command_buffers.reserve( buffers.size() );
+	for ( auto& buffer : buffers )
+	{
+		_command_buffers.push_back( CommandBuffer( std::move( buffer ) ) );
+		_available_command_buffers.push( &_command_buffers.back() );
+	}
+}
+
+renderer::Device::~Device() = default;
+
+renderer::raii::CommandBuffer renderer::Device::grab_command_buffer()
+{
+	raii::CommandBuffer cmd( _available_command_buffers.front(), raii::CommandBufferDeleter { this } );
+	_available_command_buffers.pop();
+	return cmd;
+}
+
+void renderer::Device::release_command_buffer( CommandBuffer* buffer )
+{
+	_available_command_buffers.push( buffer );
 }

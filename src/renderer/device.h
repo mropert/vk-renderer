@@ -1,18 +1,38 @@
 #pragma once
 
+#include <queue>
+
 #include <renderer/common.h>
 
 namespace renderer
 {
+	class CommandBuffer;
+	class Device;
+
+	namespace raii
+	{
+		struct CommandBufferDeleter
+		{
+			Device* device;
+			void operator()( renderer::CommandBuffer* cmd ) const;
+		};
+		using CommandBuffer = std::unique_ptr<renderer::CommandBuffer, CommandBufferDeleter>;
+	}
+
 	class Device
 	{
 	public:
 		explicit Device( const char* appname );
+		~Device();
 
-//	private:
+		raii::CommandBuffer grab_command_buffer();
+		void release_command_buffer( CommandBuffer* buffer );
+
+		//	private:
 		const Extent2D& get_extent() const { return _extent; }
 
 		sdl::raii::Window _window;
+		Extent2D _extent;
 		vk::raii::Context _context;
 		vk::raii::Instance _instance = nullptr;
 		vk::raii::DebugUtilsMessengerEXT _debug_util = nullptr;
@@ -23,8 +43,18 @@ namespace renderer
 		uint32_t _present_queue_family_index = 0;
 		vk::raii::Queue _gfx_queue = nullptr;
 		vma::raii::Allocator _allocator;
-		Extent2D _extent;
+		vk::raii::CommandPool _command_pool = nullptr;
+		std::vector<CommandBuffer> _command_buffers;
+		std::queue<CommandBuffer*> _available_command_buffers;
 
 		friend class Swapchain;
 	};
+
+	namespace raii
+	{
+		inline void CommandBufferDeleter::operator()( renderer::CommandBuffer* cmd ) const
+		{
+			device->release_command_buffer( cmd );
+		}
+	}
 }

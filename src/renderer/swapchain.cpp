@@ -28,7 +28,7 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 
 	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
 	{
-		_frames_data[ i ].render_fence = device._device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
+		_frames_data[ i ].render_fence = device._device.createFence( vk::FenceCreateInfo { .flags = vk::FenceCreateFlagBits::eSignaled } );
 		_frames_data[ i ].render_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
 		_frames_data[ i ].swapchain_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
 	}
@@ -37,7 +37,11 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 std::tuple<uint32_t, renderer::Texture> renderer::Swapchain::acquire()
 {
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
-	_device->_device.waitForFences( *_frames_data[ frame_index ].render_fence, vk::True, UINT64_MAX );
+	if ( const auto result = _device->_device.waitForFences( *_frames_data[ frame_index ].render_fence, vk::True, UINT64_MAX );
+		 result != vk::Result::eSuccess )
+	{
+		throw renderer_error( "Render fence not signaled", result );
+	}
 	const auto [ result, image_index ] = _swapchain.acquireNextImage( UINT64_MAX, _frames_data[ frame_index ].swapchain_semaphore );
 	if ( result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR )
 	{
@@ -51,18 +55,35 @@ std::tuple<uint32_t, renderer::Texture> renderer::Swapchain::acquire()
 void renderer::Swapchain::submit( CommandBuffer& buffer )
 {
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
-	const vk::CommandBufferSubmitInfo cmdSubmitInfo( buffer._cmd_buffer );
-	const vk::SemaphoreSubmitInfo waitInfo( _frames_data[ frame_index ].swapchain_semaphore,
-											1,
-											vk::PipelineStageFlagBits2::eColorAttachmentOutput );
-	const vk::SemaphoreSubmitInfo signalInfo( _frames_data[ frame_index ].render_semaphore, 1, vk::PipelineStageFlagBits2::eAllGraphics );
+	const vk::CommandBufferSubmitInfo cmd_submit_info { .commandBuffer = buffer._cmd_buffer };
+	const vk::SemaphoreSubmitInfo wait_info { .semaphore = _frames_data[ frame_index ].swapchain_semaphore,
+											  .value = 1,
+											  .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput };
+	const vk::SemaphoreSubmitInfo signal_info { .semaphore = _frames_data[ frame_index ].render_semaphore,
+												.value = 1,
+												.stageMask = vk::PipelineStageFlagBits2::eAllGraphics };
 
-	_device->_gfx_queue.submit2( vk::SubmitInfo2( vk::SubmitFlags(), waitInfo, cmdSubmitInfo, signalInfo ) );
+	_device->_gfx_queue.submit2( vk::SubmitInfo2 { .waitSemaphoreInfoCount = 1,
+												   .pWaitSemaphoreInfos = &wait_info,
+												   .commandBufferInfoCount = 1,
+												   .pCommandBufferInfos = &cmd_submit_info,
+												   .signalSemaphoreInfoCount = 1,
+												   .pSignalSemaphoreInfos = &signal_info },
+								 _frames_data[ frame_index ].render_fence );
 }
 
 void renderer::Swapchain::present()
 {
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
-	_device->_gfx_queue.presentKHR( vk::PresentInfoKHR( _frames_data[ frame_index ].render_semaphore, _swapchain, _current_image ) );
+	const auto result = _device->_gfx_queue.presentKHR(
+		vk::PresentInfoKHR { .waitSemaphoreCount = 1,
+							 .pWaitSemaphores = &*_frames_data[ frame_index ].render_semaphore,
+							 .swapchainCount = 1,
+							 .pSwapchains = &*_swapchain,
+							 .pImageIndices = &_current_image } );
 	++_frame_count;
+	if ( result != vk::Result::eSuccess )
+	{
+		throw renderer_error( "Failed to present swapchain", result );
+	}
 }
