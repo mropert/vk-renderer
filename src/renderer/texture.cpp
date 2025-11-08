@@ -2,16 +2,6 @@
 
 #include <renderer/command_buffer.h>
 
-renderer::Texture::Texture( vma::raii::Image image )
-	: _image( std::move( image ) )
-{
-}
-
-renderer::Texture::Texture( VkImage image )
-	: _image { image, vma::raii::ResourceDeleter {} }
-{
-}
-
 void renderer::Texture::transition( CommandBuffer& cmd, vk::ImageLayout from, vk::ImageLayout to )
 {
 	const vk::ImageAspectFlags aspectMask = ( to == vk::ImageLayout::eDepthAttachmentOptimal ) ? vk::ImageAspectFlagBits::eDepth
@@ -22,7 +12,7 @@ void renderer::Texture::transition( CommandBuffer& cmd, vk::ImageLayout from, vk
 												 .dstAccessMask = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
 												 .oldLayout = from,
 												 .newLayout = to,
-												 .image = _image.get(),
+												 .image = _image,
 												 .subresourceRange = {
 													 .aspectMask = aspectMask,
 													 .levelCount = VK_REMAINING_MIP_LEVELS,

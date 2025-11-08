@@ -1,15 +1,27 @@
 #pragma once
 
+#include <array>
 #include <renderer/common.h>
 
 namespace renderer
 {
+	class TextureView;
+
+	struct RenderAttachment
+	{
+		TextureView* target;
+		std::array<float, 4> clear_value;
+	};
+
 	class CommandBuffer
 	{
 	public:
 		void begin();
 		void end();
 		void reset();
+
+		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target );
+		void end_rendering();
 
 	private:
 		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )

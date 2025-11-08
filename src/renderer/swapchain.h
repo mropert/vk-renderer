@@ -2,6 +2,7 @@
 
 #include <array>
 #include <renderer/common.h>
+#include <renderer/texture.h>
 
 namespace renderer
 {
@@ -30,7 +31,7 @@ namespace renderer
 
 		Device* _device;
 		vk::raii::SwapchainKHR _swapchain = nullptr;
-		std::vector<vk::Image> _images;
+		std::vector<Texture> _images;
 		std::array<FrameData, MAX_FRAMES_IN_FLIGHT> _frames_data;
 		uint32_t _frame_count = 0;
 		uint32_t _current_image = -1;

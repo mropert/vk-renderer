@@ -41,14 +41,7 @@ namespace vma::raii
 		::VmaAllocation allocation;
 		::VmaAllocationInfo info;
 		void operator()( ::VkBuffer buffer ) const { vmaDestroyBuffer( allocator, buffer, allocation ); }
-		void operator()( ::VkImage image ) const
-		{
-			// Images with no allocators (eg: swapchain images) are valid and shouldn't be freed
-			if ( allocator )
-			{
-				vmaDestroyImage( allocator, image, allocation );
-			}
-		}
+		void operator()( ::VkImage image ) const { vmaDestroyImage( allocator, image, allocation ); }
 	};
 	template <typename T>
 	using Resource = std::unique_ptr<std::remove_pointer_t<T>, ResourceDeleter>;
@@ -66,7 +59,7 @@ namespace vma::raii
 namespace renderer
 {
 	inline constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-	using Extent2D = ::VkExtent2D;
+	using Extent2D = ::vk::Extent2D;
 
 	class renderer_error : public std::runtime_error
 	{

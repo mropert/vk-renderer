@@ -12,12 +12,29 @@ namespace renderer
 		void transition( CommandBuffer& cmd, vk::ImageLayout from, vk::ImageLayout to );
 
 		// private:
-		explicit Texture( vma::raii::Image image );
-		explicit Texture( VkImage image );
+		explicit Texture( vk::Image image )
+			: _image( image )
+		{
+		}
 
-		vma::raii::Image _image;
+		vk::Image _image;
 
 		friend class Device;
 		friend class Swapchain;
+	};
+
+	class TextureView
+	{
+	public:
+		// private:
+		explicit TextureView( vk::ImageView view )
+			: _view( std::move( view ) )
+		{
+		}
+
+		vk::ImageView _view;
+
+		friend class CommandBuffer;
+		friend class Device;
 	};
 }

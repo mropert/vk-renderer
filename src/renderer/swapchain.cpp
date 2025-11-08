@@ -1,6 +1,7 @@
 #include "swapchain.h"
 
 #include <VkBootstrap.h>
+#include <ranges>
 #include <renderer/command_buffer.h>
 #include <renderer/device.h>
 #include <renderer/texture.h>
@@ -24,7 +25,8 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 		throw renderer_error( swapchain_ret.error(), swapchain_ret.vk_result() );
 	}
 	_swapchain = { device._device, swapchain_ret.value() };
-	_images = _swapchain.getImages();
+	_images = _swapchain.getImages() | std::views::transform( []( vk::Image img ) { return Texture( img ); } )
+		| std::ranges::to<std::vector>();
 
 	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
 	{
@@ -49,7 +51,7 @@ std::tuple<uint32_t, renderer::Texture> renderer::Swapchain::acquire()
 	}
 	_current_image = image_index;
 	_device->_device.resetFences( *_frames_data[ frame_index ].render_fence );
-	return std::make_tuple( frame_index, Texture( _images[ image_index ] ) );
+	return std::make_tuple( frame_index, _images[ image_index ] );
 }
 
 void renderer::Swapchain::submit( CommandBuffer& buffer )
