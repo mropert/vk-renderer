@@ -35,6 +35,16 @@ namespace vma::raii
 	};
 	using Allocator = std::unique_ptr<::VmaAllocator_T, AllocatorDeleter>;
 
+	struct Allocation
+	{
+		::VmaAllocator allocator;
+		::VmaAllocation allocation;
+		::VmaAllocationInfo info;
+
+		void destroy( ::VkBuffer buffer ) const { vmaDestroyBuffer( allocator, buffer, allocation ); }
+		void destroy( ::VkImage image ) const { vmaDestroyImage( allocator, image, allocation ); }
+	};
+
 	struct ResourceDeleter
 	{
 		::VmaAllocator allocator;
