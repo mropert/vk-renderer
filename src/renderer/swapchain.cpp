@@ -6,7 +6,7 @@
 #include <renderer/device.h>
 #include <renderer/texture.h>
 
-renderer::Swapchain::Swapchain( Device& device, VkFormat format )
+renderer::Swapchain::Swapchain( Device& device, Texture::Format format )
 	: _device( &device )
 {
 	auto swapchain_ret = vkb::SwapchainBuilder( *device._physical_device,
@@ -14,7 +14,8 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 												*device._surface,
 												device._gfx_queue_family_index,
 												device._present_queue_family_index )
-							 .set_desired_format( VkSurfaceFormatKHR { .format = format, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } )
+							 .set_desired_format( VkSurfaceFormatKHR { .format = static_cast<VkFormat>( format ),
+																	   .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } )
 							 .set_desired_present_mode( VK_PRESENT_MODE_FIFO_KHR )
 							 .set_desired_extent( device._extent.width, device._extent.height )
 							 .add_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_DST_BIT )
@@ -25,8 +26,15 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 		throw renderer_error( swapchain_ret.error(), swapchain_ret.vk_result() );
 	}
 	_swapchain = { device._device, swapchain_ret.value() };
-	_images = _swapchain.getImages() | std::views::transform( []( vk::Image img ) { return Texture( img ); } )
-		| std::ranges::to<std::vector>();
+
+	const auto& images = _swapchain.getImages();
+	_images.reserve( images.size() );
+	_image_views.reserve( _images.size() );
+	for ( const auto image : images )
+	{
+		_images.push_back( Texture { image, format, Texture::Usage::COLOR_ATTACHMENT, device._extent } );
+		_image_views.push_back( _device->create_texture_view( _images.back(), TextureView::Aspect::COLOR ) );
+	}
 
 	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
 	{
@@ -36,7 +44,7 @@ renderer::Swapchain::Swapchain( Device& device, VkFormat format )
 	}
 }
 
-std::tuple<uint32_t, renderer::Texture> renderer::Swapchain::acquire()
+std::tuple<uint32_t, renderer::Texture, renderer::TextureView> renderer::Swapchain::acquire()
 {
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
 	if ( const auto result = _device->_device.waitForFences( *_frames_data[ frame_index ].render_fence, vk::True, UINT64_MAX );
@@ -51,7 +59,7 @@ std::tuple<uint32_t, renderer::Texture> renderer::Swapchain::acquire()
 	}
 	_current_image = image_index;
 	_device->_device.resetFences( *_frames_data[ frame_index ].render_fence );
-	return std::make_tuple( frame_index, _images[ image_index ] );
+	return std::make_tuple( frame_index, _images[ image_index ], static_cast<TextureView>( _image_views[ image_index ] ) );
 }
 
 void renderer::Swapchain::submit( CommandBuffer& buffer )
