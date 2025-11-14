@@ -28,7 +28,7 @@ renderer::Device::Device( const char* appname )
 
 	const auto vk_instance_result = vkb::InstanceBuilder()
 										.set_app_name( "Brutus-ng Vulkan" )
-										.request_validation_layers( true )
+										.enable_validation_layers( true )
 										.use_default_debug_messenger()
 										.require_api_version( 1, 3, 0 )
 										.enable_extensions( ext_count, exts )
