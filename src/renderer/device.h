@@ -1,8 +1,8 @@
 #pragma once
 
 #include <queue>
-
 #include <renderer/common.h>
+#include <renderer/texture.h>
 
 namespace renderer
 {
@@ -27,6 +27,9 @@ namespace renderer
 
 		raii::CommandBuffer grab_command_buffer();
 		void release_command_buffer( CommandBuffer* buffer );
+
+		raii::Texture create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples = 1 );
+		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect );
 
 		//	private:
 		const Extent2D& get_extent() const { return _extent; }

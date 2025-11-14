@@ -126,3 +126,46 @@ void renderer::Device::release_command_buffer( CommandBuffer* buffer )
 {
 	_available_command_buffers.push( buffer );
 }
+
+renderer::raii::Texture renderer::Device::create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples )
+{
+	const VkImageCreateInfo info { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+								   .imageType = VK_IMAGE_TYPE_2D,
+								   .format = static_cast<VkFormat>( format ),
+								   .extent = { .width = extent.width, .height = extent.height, .depth = 1 },
+								   .mipLevels = 1,
+								   .arrayLayers = 1,
+								   .samples = static_cast<VkSampleCountFlagBits>( samples ),
+								   .tiling = VK_IMAGE_TILING_OPTIMAL,
+								   .usage = static_cast<VkImageUsageFlags>( usage ) };
+
+	const VmaAllocationCreateInfo create_info { .usage = VMA_MEMORY_USAGE_GPU_ONLY, .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+
+	VkImage image {};
+	VmaAllocation allocation {};
+	VmaAllocationInfo allocation_info {};
+	auto ret = vmaCreateImage( _allocator.get(), &info, &create_info, &image, &allocation, &allocation_info );
+	if ( ret )
+	{
+		throw renderer_error( "Failed to create image", ret );
+	}
+
+	return raii::Texture( renderer::Texture { image, format, usage, extent, samples },
+						  vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
+}
+
+renderer::raii::TextureView renderer::Device::create_texture_view( const Texture& texture, TextureView::Aspect aspect )
+{
+	const vk::ImageViewCreateInfo image_view_info { .image = texture._image,
+													.viewType = vk::ImageViewType::e2D,
+													.format = static_cast<vk::Format>( texture._format ),
+													.subresourceRange = { .aspectMask = static_cast<vk::ImageAspectFlagBits>( aspect ),
+																		  .baseMipLevel = 0,
+																		  .levelCount = 1,
+																		  .baseArrayLayer = 0,
+																		  .layerCount = 1 } };
+
+
+	auto view = _device.createImageView( image_view_info );
+	return raii::TextureView( std::move( view ) );
+}

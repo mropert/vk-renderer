@@ -49,40 +49,6 @@ namespace renderer
 		return Texture::Usage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
 	}
 
-	class OwnedTexture : public Texture
-	{
-	public:
-		OwnedTexture() = default;
-		~OwnedTexture() { _allocation.destroy( _image ); }
-		OwnedTexture( const OwnedTexture& ) = delete;
-		OwnedTexture& operator=( const OwnedTexture& ) = delete;
-
-		OwnedTexture( OwnedTexture&& rhs ) noexcept
-			: Texture( rhs )
-			, _allocation( rhs._allocation )
-		{
-			rhs = {};
-		}
-
-		OwnedTexture& operator=( OwnedTexture&& rhs ) noexcept
-		{
-			static_cast<Texture&>( *this ) = static_cast<Texture&>( rhs );
-			_allocation = rhs._allocation;
-			rhs = {};
-			return *this;
-		}
-
-	private:
-		OwnedTexture( const Texture& Desc, const vma::raii::Allocation& allocation )
-			: Texture( Desc )
-			, _allocation( allocation )
-		{
-		}
-
-		friend class Device;
-		vma::raii::Allocation _allocation;
-	};
-
 	class TextureView
 	{
 	public:
@@ -99,10 +65,55 @@ namespace renderer
 		friend class Device;
 	};
 
-	struct OwnedTextureView
+	namespace raii
 	{
-		operator TextureView() const { return { _view }; }
+		class Texture : public renderer::Texture
+		{
+		public:
+			Texture() = default;
+			~Texture() { _allocation.destroy( _image ); }
+			Texture( const Texture& ) = delete;
+			Texture& operator=( const Texture& ) = delete;
 
-		vk::raii::ImageView _view;
-	};
+			Texture( Texture&& rhs ) noexcept
+				: renderer::Texture( rhs )
+				, _allocation( rhs._allocation )
+			{
+				rhs = {};
+			}
+
+			Texture& operator=( Texture&& rhs ) noexcept
+			{
+				static_cast<renderer::Texture&>( *this ) = static_cast<renderer::Texture&>( rhs );
+				_allocation = rhs._allocation;
+				rhs = {};
+				return *this;
+			}
+
+		private:
+			Texture( const renderer::Texture& Desc, const vma::raii::Allocation& allocation )
+				: renderer::Texture( Desc )
+				, _allocation( allocation )
+			{
+			}
+
+			friend class Device;
+			vma::raii::Allocation _allocation;
+		};
+
+		class TextureView
+		{
+		public:
+			operator renderer::TextureView() const { return { _view }; }
+
+		private:
+			explicit TextureView( vk::raii::ImageView view )
+				: _view( std::move( view ) )
+			{
+			}
+
+			friend class Device;
+			vk::raii::ImageView _view;
+		};
+	}
 }
