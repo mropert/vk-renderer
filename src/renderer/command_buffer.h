@@ -26,6 +26,7 @@ namespace renderer
 		void end_rendering();
 
 		void transition_texture( Texture& tex, Texture::Layout target );
+		void blit_texture( const Texture& src, const Texture& dst );
 
 		void set_scissor( Extent2D extent );
 		void set_viewport( Extent2D extent );

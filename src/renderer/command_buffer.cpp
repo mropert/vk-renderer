@@ -1,5 +1,6 @@
 #include "command_buffer.h"
 
+#include <cassert>
 #include <renderer/texture.h>
 
 void renderer::CommandBuffer::begin()
@@ -76,6 +77,26 @@ void renderer::CommandBuffer::transition_texture( Texture& tex, Texture::Layout 
 
 	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &imageBarrier } );
 	tex._layout = target;
+}
+
+void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst )
+{
+	assert( src._layout == Texture::Layout::TRANSFER_SRC_OPTIMAL );
+	assert( dst._layout == Texture::Layout::TRANSFER_DST_OPTIMAL );
+
+	const vk::ImageBlit2 blit_region { .srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
+									   .srcOffsets = { { vk::Offset3D {}, vk::Offset3D( src._extent.width, src._extent.height, 1 ) } },
+									   .dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
+									   .dstOffsets = { { vk::Offset3D {}, vk::Offset3D( dst._extent.width, dst._extent.height, 1 ) } } };
+
+	const vk::BlitImageInfo2 blit_info { .srcImage = src._image,
+										 .srcImageLayout = static_cast<vk::ImageLayout>( src._layout ),
+										 .dstImage = dst._image,
+										 .dstImageLayout = static_cast<vk::ImageLayout>( dst._layout ),
+										 .regionCount = 1,
+										 .pRegions = &blit_region };
+
+	_cmd_buffer.blitImage2( blit_info );
 }
 
 void renderer::CommandBuffer::set_scissor( Extent2D extent )
