@@ -19,16 +19,23 @@ void renderer::CommandBuffer::reset()
 
 void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target )
 {
-	const vk::RenderingAttachmentInfo color_attachment { .imageView = color_target.target->_view,
-														 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-														 .loadOp = vk::AttachmentLoadOp::eClear,
-														 .storeOp = vk::AttachmentStoreOp::eStore,
-														 .clearValue = { .color = color_target.clear_value } };
+	vk::RenderingAttachmentInfo color_attachment { .imageView = color_target.target._view,
+												   .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+												   .loadOp = vk::AttachmentLoadOp::eClear,
+												   .storeOp = vk::AttachmentStoreOp::eStore,
+												   .clearValue = { .color = color_target.clear_value } };
+
+	if ( color_target.resolve_target._view )
+	{
+		color_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
+		color_attachment.resolveImageView = color_target.resolve_target._view;
+		color_attachment.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	}
 
 	vk::RenderingAttachmentInfo depth_attachment;
-	if ( depth_target.target )
+	if ( depth_target.target._view )
 	{
-		depth_attachment = { .imageView = depth_target.target->_view,
+		depth_attachment = { .imageView = depth_target.target._view,
 							 .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 							 .loadOp = vk::AttachmentLoadOp::eClear,
 							 .storeOp = vk::AttachmentStoreOp::eStore };
@@ -38,7 +45,7 @@ void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment
 										 .layerCount = 1,
 										 .colorAttachmentCount = 1,
 										 .pColorAttachments = &color_attachment,
-										 .pDepthAttachment = depth_target.target ? &depth_attachment : nullptr };
+										 .pDepthAttachment = depth_target.target._view ? &depth_attachment : nullptr };
 
 	_cmd_buffer.beginRendering( renderInfo );
 }
@@ -69,4 +76,22 @@ void renderer::CommandBuffer::transition_texture( Texture& tex, Texture::Layout 
 
 	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &imageBarrier } );
 	tex._layout = target;
+}
+
+void renderer::CommandBuffer::set_scissor( Extent2D extent )
+{
+	const vk::Rect2D scissor { .extent = extent };
+	_cmd_buffer.setScissor( 0, scissor );
+}
+
+void renderer::CommandBuffer::set_viewport( Extent2D extent )
+{
+	const vk::Viewport viewport { .x = 0.f,
+								  .y = 0.f,
+								  .width = static_cast<float>( extent.width ),
+								  .height = static_cast<float>( extent.height ),
+								  .minDepth = 0.f,
+								  .maxDepth = 1.f };
+
+	_cmd_buffer.setViewport( 0, viewport );
 }

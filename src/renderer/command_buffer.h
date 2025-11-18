@@ -10,7 +10,8 @@ namespace renderer
 
 	struct RenderAttachment
 	{
-		TextureView* target;
+		TextureView target;
+		TextureView resolve_target;
 		std::array<float, 4> clear_value;
 	};
 
@@ -25,6 +26,9 @@ namespace renderer
 		void end_rendering();
 
 		void transition_texture( Texture& tex, Texture::Layout target );
+
+		void set_scissor( Extent2D extent );
+		void set_viewport( Extent2D extent );
 
 	private:
 		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )
