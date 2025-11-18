@@ -2,6 +2,7 @@
 
 #include <array>
 #include <renderer/common.h>
+#include <renderer/texture.h>
 
 namespace renderer
 {
@@ -22,6 +23,8 @@ namespace renderer
 
 		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target );
 		void end_rendering();
+
+		void transition_texture( Texture& tex, Texture::Layout target );
 
 	private:
 		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )

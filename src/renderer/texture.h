@@ -18,6 +18,19 @@ namespace renderer
 			D32_SFLOAT = vk::Format::eD32Sfloat
 		};
 
+		enum class Layout : std::underlying_type_t<vk::ImageLayout>
+		{
+			UNDEFINED = vk::ImageLayout::eUndefined,
+			GENERAL = vk::ImageLayout::eGeneral,
+			COLOR_ATTACHMENT_OPTIMAL = vk::ImageLayout::eColorAttachmentOptimal,
+			DEPTH_ATTACHMENT_OPTIMAL = vk::ImageLayout::eDepthAttachmentOptimal,
+			DEPTH_READ_ONLY_OPTIMAL = vk::ImageLayout::eDepthReadOnlyOptimal,
+			SHADER_READ_ONLY_OPTIMAL = vk::ImageLayout::eShaderReadOnlyOptimal,
+			TRANSFER_SRC_OPTIMAL = vk::ImageLayout::eTransferSrcOptimal,
+			TRANSFER_DST_OPTIMAL = vk::ImageLayout::eTransferDstOptimal,
+			PRESENT_SRC = vk::ImageLayout::ePresentSrcKHR
+		};
+
 		enum class Usage : std::underlying_type_t<vk::ImageUsageFlagBits>
 		{
 			TRANSFER_SRC = vk::ImageUsageFlagBits::eTransferSrc,
@@ -25,8 +38,6 @@ namespace renderer
 			COLOR_ATTACHMENT = vk::ImageUsageFlagBits::eColorAttachment,
 			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment,
 		};
-
-		void transition( CommandBuffer& cmd, vk::ImageLayout from, vk::ImageLayout to );
 
 		Format get_format() const { return _format; }
 		Usage get_usage() const { return _usage; }
@@ -39,7 +50,9 @@ namespace renderer
 		Usage _usage;
 		Extent2D _extent;
 		int _samples = 1;
+		Layout _layout = Layout::UNDEFINED;
 
+		friend class CommandBuffer;
 		friend class Device;
 		friend class Swapchain;
 	};
