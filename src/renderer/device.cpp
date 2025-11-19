@@ -1,4 +1,6 @@
 #include "device.h"
+#include "device.h"
+#include "device.h"
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
@@ -168,4 +170,31 @@ renderer::raii::TextureView renderer::Device::create_texture_view( const Texture
 
 	auto view = _device.createImageView( image_view_info );
 	return raii::TextureView( std::move( view ) );
+}
+
+renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std::size_t size, bool upload )
+{
+	const VkBufferCreateInfo buffer_Info { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+										   .size = size,
+										   .usage = static_cast<VkBufferUsageFlags>( usage ) };
+	const VmaAllocationCreateInfo vma_alloc_info = { .flags = upload ? VMA_ALLOCATION_CREATE_MAPPED_BIT : 0u,
+													 .usage = upload ? VMA_MEMORY_USAGE_CPU_TO_GPU : VMA_MEMORY_USAGE_GPU_ONLY };
+
+	VkBuffer buffer {};
+	VmaAllocation allocation {};
+	VmaAllocationInfo allocation_info {};
+	const auto ret = vmaCreateBuffer( _allocator.get(), &buffer_Info, &vma_alloc_info, &buffer, &allocation, &allocation_info );
+	if ( ret )
+	{
+		throw renderer_error( "Failed to create buffer", ret );
+	}
+
+	vk::DeviceAddress address = 0;
+	if ( ( usage & Buffer::Usage::SHADER_DEVICE_ADDRESS ) == Buffer::Usage::SHADER_DEVICE_ADDRESS )
+	{
+		address = _device.getBufferAddress( vk::BufferDeviceAddressInfo { .buffer = buffer } );
+	}
+
+	return raii::Buffer( renderer::Buffer { buffer, address, allocation_info.pMappedData, size, usage },
+						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }

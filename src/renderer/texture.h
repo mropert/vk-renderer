@@ -4,8 +4,6 @@
 
 namespace renderer
 {
-	class CommandBuffer;
-
 	class Texture
 	{
 	public:
@@ -35,6 +33,7 @@ namespace renderer
 		{
 			TRANSFER_SRC = vk::ImageUsageFlagBits::eTransferSrc,
 			TRANSFER_DST = vk::ImageUsageFlagBits::eTransferDst,
+			SAMPLED = vk::ImageUsageFlagBits::eSampled,
 			COLOR_ATTACHMENT = vk::ImageUsageFlagBits::eColorAttachment,
 			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment,
 		};
@@ -92,14 +91,14 @@ namespace renderer
 				: renderer::Texture( rhs )
 				, _allocation( rhs._allocation )
 			{
-				rhs = {};
+				rhs.clear();
 			}
 
 			Texture& operator=( Texture&& rhs ) noexcept
 			{
 				static_cast<renderer::Texture&>( *this ) = static_cast<renderer::Texture&>( rhs );
 				_allocation = rhs._allocation;
-				rhs = {};
+				rhs.clear();
 				return *this;
 			}
 
@@ -108,6 +107,12 @@ namespace renderer
 				: renderer::Texture( Desc )
 				, _allocation( allocation )
 			{
+			}
+
+			void clear()
+			{
+				*static_cast<renderer::Texture*>( this ) = {};
+				_allocation = {};
 			}
 
 			friend class Device;

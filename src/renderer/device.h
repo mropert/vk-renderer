@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <renderer/buffer.h>
 #include <renderer/common.h>
 #include <renderer/texture.h>
 
@@ -30,6 +31,8 @@ namespace renderer
 
 		raii::Texture create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples = 1 );
 		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect );
+
+		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
 
 		//	private:
 		const Extent2D& get_extent() const { return _extent; }

@@ -41,8 +41,20 @@ namespace vma::raii
 		::VmaAllocation allocation;
 		::VmaAllocationInfo info;
 
-		void destroy( ::VkBuffer buffer ) const { vmaDestroyBuffer( allocator, buffer, allocation ); }
-		void destroy( ::VkImage image ) const { vmaDestroyImage( allocator, image, allocation ); }
+		void destroy( ::VkBuffer buffer ) const
+		{
+			if ( buffer )
+			{
+				vmaDestroyBuffer( allocator, buffer, allocation );
+			}
+		}
+		void destroy( ::VkImage image ) const
+		{
+			if ( image )
+			{
+				vmaDestroyImage( allocator, image, allocation );
+			}
+		}
 	};
 
 	struct ResourceDeleter
