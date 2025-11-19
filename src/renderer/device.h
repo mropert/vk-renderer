@@ -56,6 +56,7 @@ namespace renderer
 		std::vector<CommandBuffer> _command_buffers;
 		std::queue<CommandBuffer*> _available_command_buffers;
 
+		friend class BindlessManager;
 		friend class Swapchain;
 	};
 
