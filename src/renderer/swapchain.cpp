@@ -59,7 +59,7 @@ std::tuple<uint32_t, renderer::Texture, renderer::TextureView> renderer::Swapcha
 	}
 	_current_image = image_index;
 	_device->_device.resetFences( *_frames_data[ frame_index ].render_fence );
-	return std::make_tuple( frame_index, _images[ image_index ], static_cast<TextureView>( _image_views[ image_index ] ) );
+	return { frame_index, _images[ image_index ], _image_views[ image_index ] };
 }
 
 void renderer::Swapchain::submit( CommandBuffer& buffer )

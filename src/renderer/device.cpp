@@ -1,6 +1,4 @@
 #include "device.h"
-#include "device.h"
-#include "device.h"
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
@@ -170,6 +168,13 @@ renderer::raii::TextureView renderer::Device::create_texture_view( const Texture
 
 	auto view = _device.createImageView( image_view_info );
 	return raii::TextureView( std::move( view ) );
+}
+
+renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter )
+{
+	auto sampler = _device.createSampler(
+		vk::SamplerCreateInfo { .magFilter = static_cast<vk::Filter>( filter ), .minFilter = static_cast<vk::Filter>( filter ) } );
+	return raii::Sampler( std::move( sampler ) );
 }
 
 renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std::size_t size, bool upload )

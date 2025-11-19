@@ -4,6 +4,12 @@
 
 namespace renderer
 {
+	namespace raii
+	{
+		class Texture;
+		class TextureView;
+	}
+
 	class Texture
 	{
 	public:
@@ -75,6 +81,7 @@ namespace renderer
 
 		friend class CommandBuffer;
 		friend class Device;
+		friend class raii::TextureView;
 	};
 
 	namespace raii
@@ -122,6 +129,7 @@ namespace renderer
 		class TextureView
 		{
 		public:
+			TextureView() = default;
 			operator renderer::TextureView() const { return { _view }; }
 
 		private:
@@ -131,7 +139,7 @@ namespace renderer
 			}
 
 			friend class Device;
-			vk::raii::ImageView _view;
+			vk::raii::ImageView _view = nullptr;
 		};
 	}
 }
