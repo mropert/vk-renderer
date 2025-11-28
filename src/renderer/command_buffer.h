@@ -6,7 +6,9 @@
 
 namespace renderer
 {
+	class BindlessManager;
 	class Buffer;
+	class Pipeline;
 	class TextureView;
 
 	struct RenderAttachment
@@ -32,8 +34,20 @@ namespace renderer
 		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target );
 		void end_rendering();
 
+		void bind_pipeline( const Pipeline& pipeline, const BindlessManager& bindless_manager );
+
 		void set_scissor( Extent2D extent );
 		void set_viewport( Extent2D extent );
+
+		template <typename T>
+		void push_constants( const Pipeline& pipeline, const T& data )
+		{
+			push_constants( pipeline, &data, sizeof( T ) );
+		}
+
+		void draw_indexed( const Buffer& index_buffer );
+
+		VkCommandBuffer get_optick_context() const { return *_cmd_buffer; }
 
 	private:
 		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )
@@ -41,7 +55,8 @@ namespace renderer
 		{
 		}
 
-	public:
+		void push_constants( const Pipeline& pipeline, const void* data, std::size_t size );
+
 		vk::raii::CommandBuffer _cmd_buffer;
 
 		friend class Device;

@@ -83,27 +83,27 @@ namespace renderer
 	inline constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 	using Extent2D = ::vk::Extent2D;
 
-	class renderer_error : public std::runtime_error
+	class Error : public std::runtime_error
 	{
 	public:
-		renderer_error( std::error_code code, VkResult result )
+		Error( std::error_code code, VkResult result )
 			: std::runtime_error( code.message() )
 			, _error( result )
 		{
 		}
 
-		explicit renderer_error( const std::string& msg )
+		explicit Error( const std::string& msg )
 			: std::runtime_error( msg )
 		{
 		}
 
-		renderer_error( const std::string& msg, VkResult error )
+		Error( const std::string& msg, VkResult error )
 			: std::runtime_error( msg )
 			, _error( error )
 		{
 		}
 
-		renderer_error( const std::string& msg, vk::Result error )
+		Error( const std::string& msg, vk::Result error )
 			: std::runtime_error( msg )
 			, _error( static_cast<VkResult>( error ) )
 		{

@@ -8,7 +8,7 @@ void renderer::raii::Buffer::map()
 	const auto ret = vmaMapMemory( _allocation.allocator, _allocation.allocation, &_mapped_address );
 	if ( ret )
 	{
-		throw renderer_error( "Failed to map buffer", ret );
+		throw Error( "Failed to map buffer", ret );
 	}
 }
 

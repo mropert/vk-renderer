@@ -3,11 +3,13 @@
 #include <queue>
 #include <renderer/buffer.h>
 #include <renderer/common.h>
+#include <renderer/pipeline.h>
 #include <renderer/sampler.h>
 #include <renderer/texture.h>
 
 namespace renderer
 {
+	class BindlessManager;
 	class CommandBuffer;
 	class Device;
 
@@ -19,6 +21,9 @@ namespace renderer
 			void operator()( renderer::CommandBuffer* cmd ) const;
 		};
 		using CommandBuffer = std::unique_ptr<renderer::CommandBuffer, CommandBufferDeleter>;
+
+		class Pipeline;
+		class ShaderCode;
 	}
 
 	class Device
@@ -36,6 +41,13 @@ namespace renderer
 		raii::Sampler create_sampler( Sampler::Filter filter );
 
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
+
+		raii::Pipeline create_pipeline( const Pipeline::Desc& desc,
+										const raii::ShaderCode& vertex_code,
+										const raii::ShaderCode& fragment_code,
+										const BindlessManager& bindless_manager );
+
+		void submit( CommandBuffer& buffer, vk::Fence signal_fence );
 
 		//	private:
 		const Extent2D& get_extent() const { return _extent; }

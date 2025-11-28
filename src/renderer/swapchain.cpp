@@ -23,7 +23,7 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format )
 
 	if ( !swapchain_ret )
 	{
-		throw renderer_error( swapchain_ret.error(), swapchain_ret.vk_result() );
+		throw Error( swapchain_ret.error(), swapchain_ret.vk_result() );
 	}
 	_swapchain = { device._device, swapchain_ret.value() };
 
@@ -50,12 +50,12 @@ std::tuple<uint32_t, renderer::Texture, renderer::TextureView> renderer::Swapcha
 	if ( const auto result = _device->_device.waitForFences( *_frames_data[ frame_index ].render_fence, vk::True, UINT64_MAX );
 		 result != vk::Result::eSuccess )
 	{
-		throw renderer_error( "Render fence not signaled", result );
+		throw Error( "Render fence not signaled", result );
 	}
 	const auto [ result, image_index ] = _swapchain.acquireNextImage( UINT64_MAX, _frames_data[ frame_index ].swapchain_semaphore );
 	if ( result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR )
 	{
-		throw renderer_error( "Failed to acquire swapchain image", result );
+		throw Error( "Failed to acquire swapchain image", result );
 	}
 	_current_image = image_index;
 	_device->_device.resetFences( *_frames_data[ frame_index ].render_fence );
@@ -94,6 +94,6 @@ void renderer::Swapchain::present()
 	++_frame_count;
 	if ( result != vk::Result::eSuccess )
 	{
-		throw renderer_error( "Failed to present swapchain", result );
+		throw Error( "Failed to present swapchain", result );
 	}
 }

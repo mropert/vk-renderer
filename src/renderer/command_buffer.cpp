@@ -1,7 +1,9 @@
 #include "command_buffer.h"
 
 #include <cassert>
+#include <renderer/bindless.h>
 #include <renderer/buffer.h>
+#include <renderer/pipeline.h>
 #include <renderer/texture.h>
 
 void renderer::CommandBuffer::begin()
@@ -120,6 +122,12 @@ void renderer::CommandBuffer::end_rendering()
 	_cmd_buffer.endRendering();
 }
 
+void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const BindlessManager& bindless_manager )
+{
+	_cmd_buffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline._pipeline );
+	_cmd_buffer.bindDescriptorSets( vk::PipelineBindPoint::eGraphics, pipeline._layout, 0, bindless_manager.get_set(), {} );
+}
+
 void renderer::CommandBuffer::set_scissor( Extent2D extent )
 {
 	const vk::Rect2D scissor { .extent = extent };
@@ -136,4 +144,19 @@ void renderer::CommandBuffer::set_viewport( Extent2D extent )
 								  .maxDepth = 1.f };
 
 	_cmd_buffer.setViewport( 0, viewport );
+}
+
+void renderer::CommandBuffer::draw_indexed( const Buffer& index_buffer )
+{
+	assert( ( index_buffer._usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER );
+	const auto count = index_buffer._size / sizeof( uint32_t );
+	_cmd_buffer.bindIndexBuffer( index_buffer._buffer, 0, vk::IndexType::eUint32 );
+	_cmd_buffer.drawIndexed( count, 1, 0, 0, 0 );
+}
+
+void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )
+{
+	assert( pipeline._desc.push_constants_size == size );
+	_cmd_buffer.getDispatcher()
+		->vkCmdPushConstants( *_cmd_buffer, pipeline._layout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, static_cast<uint32_t>( size ), data );
 }

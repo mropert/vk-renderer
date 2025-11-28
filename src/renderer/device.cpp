@@ -4,13 +4,16 @@
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
 #include <print>
+#include <renderer/bindless.h>
 #include <renderer/command_buffer.h>
+#include <renderer/pipeline.h>
+#include <renderer/shader.h>
 
 renderer::Device::Device( const char* appname )
 {
 	if ( !SDL_Init( SDL_INIT_VIDEO ) )
 	{
-		throw renderer_error( SDL_GetError() );
+		throw Error( SDL_GetError() );
 	}
 
 	const auto display = SDL_GetPrimaryDisplay();
@@ -20,7 +23,7 @@ renderer::Device::Device( const char* appname )
 	_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN ) );
 	if ( !_window )
 	{
-		throw renderer_error( SDL_GetError() );
+		throw Error( SDL_GetError() );
 	}
 
 	Uint32 ext_count = 0;
@@ -38,7 +41,7 @@ renderer::Device::Device( const char* appname )
 
 	if ( !vk_instance_result )
 	{
-		throw renderer_error( vk_instance_result.error(), vk_instance_result.vk_result() );
+		throw Error( vk_instance_result.error(), vk_instance_result.vk_result() );
 	}
 	_instance = { _context, vk_instance_result.value().instance };
 	_debug_util = { _instance, vk_instance_result.value().debug_messenger };
@@ -46,7 +49,7 @@ renderer::Device::Device( const char* appname )
 	VkSurfaceKHR surface {};
 	if ( !SDL_Vulkan_CreateSurface( _window.get(), *_instance, nullptr, &surface ) )
 	{
-		throw renderer_error( SDL_GetError() );
+		throw Error( SDL_GetError() );
 	}
 
 	_surface = vk::raii::SurfaceKHR( _instance, surface );
@@ -68,7 +71,7 @@ renderer::Device::Device( const char* appname )
 
 	if ( !physical_device_ret )
 	{
-		throw renderer_error( physical_device_ret.error(), physical_device_ret.vk_result() );
+		throw Error( physical_device_ret.error(), physical_device_ret.vk_result() );
 	}
 
 	_physical_device = { _instance, physical_device_ret.value() };
@@ -79,7 +82,7 @@ renderer::Device::Device( const char* appname )
 	const auto device_ret = vkb::DeviceBuilder( physical_device_ret.value() ).build();
 	if ( !device_ret )
 	{
-		throw renderer_error( device_ret.error(), device_ret.vk_result() );
+		throw Error( device_ret.error(), device_ret.vk_result() );
 	}
 
 	_device = { _physical_device, device_ret.value() };
@@ -97,7 +100,7 @@ renderer::Device::Device( const char* appname )
 	const auto ret = vmaCreateAllocator( &allocatorInfo, &allocator );
 	if ( ret )
 	{
-		throw renderer_error( "Failed to create vma allocator", ret );
+		throw Error( "Failed to create vma allocator", ret );
 	}
 	_allocator.reset( allocator );
 
@@ -149,7 +152,7 @@ renderer::raii::Texture renderer::Device::create_texture( Texture::Format format
 	auto ret = vmaCreateImage( _allocator.get(), &info, &create_info, &image, &allocation, &allocation_info );
 	if ( ret )
 	{
-		throw renderer_error( "Failed to create image", ret );
+		throw Error( "Failed to create image", ret );
 	}
 
 	return raii::Texture( renderer::Texture { image, format, usage, extent, samples },
@@ -193,7 +196,7 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 	const auto ret = vmaCreateBuffer( _allocator.get(), &buffer_Info, &vma_alloc_info, &buffer, &allocation, &allocation_info );
 	if ( ret )
 	{
-		throw renderer_error( "Failed to create buffer", ret );
+		throw Error( "Failed to create buffer", ret );
 	}
 
 	vk::DeviceAddress address = 0;
@@ -204,4 +207,75 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 
 	return raii::Buffer( renderer::Buffer { buffer, address, allocation_info.pMappedData, size, usage },
 						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
+}
+
+renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc& desc,
+															const raii::ShaderCode& vertex_code,
+															const raii::ShaderCode& fragment_code,
+															const BindlessManager& bindless_manager )
+{
+	const auto vertex_shader = _device.createShaderModule(
+		{ .codeSize = vertex_code.get_size() * sizeof( uint32_t ), .pCode = vertex_code.get_data() } );
+	const auto fragment_shader = _device.createShaderModule(
+		{ .codeSize = fragment_code.get_size() * sizeof( uint32_t ), .pCode = fragment_code.get_data() } );
+
+	const vk::PushConstantRange constants { .stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = desc.push_constants_size };
+	const auto desc_layout = bindless_manager.get_layout();
+	auto layout = _device.createPipelineLayout(
+		{ .setLayoutCount = 1, .pSetLayouts = &desc_layout, .pushConstantRangeCount = 1, .pPushConstantRanges = &constants } );
+
+	const vk::PipelineVertexInputStateCreateInfo vertex_input;
+	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = vk::PrimitiveTopology::eTriangleList };
+	const vk::PipelineViewportStateCreateInfo viewport { .viewportCount = 1, .scissorCount = 1 };
+	const vk::PipelineRasterizationStateCreateInfo rasterizer { .polygonMode = vk::PolygonMode::eFill,
+																.cullMode = vk::CullModeFlagBits::eNone,
+																.frontFace = vk::FrontFace::eClockwise,
+																.lineWidth = 1.f };
+	const vk::PipelineMultisampleStateCreateInfo multisampling { .rasterizationSamples = vk::SampleCountFlagBits::e4,
+																 .minSampleShading = 1.0f };
+	const vk::PipelineDepthStencilStateCreateInfo depth_stencil = { .depthTestEnable = true,
+																	.depthWriteEnable = true,
+																	.depthCompareOp = vk::CompareOp::eGreaterOrEqual,
+																	.maxDepthBounds = 1.f };
+	const vk::PipelineColorBlendAttachmentState blend_attachment { .colorWriteMask = vk::ColorComponentFlagBits::eR
+																	   | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
+																	   | vk::ColorComponentFlagBits::eA };
+	const vk::PipelineColorBlendStateCreateInfo blend_state = { .logicOp = vk::LogicOp::eCopy,
+																.attachmentCount = 1,
+																.pAttachments = &blend_attachment };
+	const auto color_format = static_cast<vk::Format>( desc.color_format );
+	const vk::PipelineRenderingCreateInfo render_info { .colorAttachmentCount = 1,
+														.pColorAttachmentFormats = &color_format,
+														.depthAttachmentFormat = static_cast<vk::Format>( desc.depth_format ) };
+
+	const std::array<vk::DynamicState, 2> state { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+	const vk::PipelineDynamicStateCreateInfo dynamic_state { .dynamicStateCount = state.size(), .pDynamicStates = state.data() };
+
+	const std::array<vk::PipelineShaderStageCreateInfo, 2> shaders {
+		{ { .stage = vk::ShaderStageFlagBits::eVertex, .module = vertex_shader, .pName = "main" },
+		  { .stage = vk::ShaderStageFlagBits::eFragment, .module = fragment_shader, .pName = "main" } }
+	};
+
+	const vk::GraphicsPipelineCreateInfo pipeline_info = { .pNext = &render_info,
+														   .stageCount = shaders.size(),
+														   .pStages = shaders.data(),
+														   .pVertexInputState = &vertex_input,
+														   .pInputAssemblyState = &ia,
+														   .pViewportState = &viewport,
+														   .pRasterizationState = &rasterizer,
+														   .pMultisampleState = &multisampling,
+														   .pDepthStencilState = &depth_stencil,
+														   .pColorBlendState = &blend_state,
+														   .pDynamicState = &dynamic_state,
+														   .layout = layout };
+
+	auto pipeline = _device.createGraphicsPipeline( nullptr, pipeline_info );
+
+	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc );
+}
+
+void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
+{
+	const vk::CommandBufferSubmitInfo info { .commandBuffer = buffer._cmd_buffer };
+	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
 }
