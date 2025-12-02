@@ -1,5 +1,6 @@
 #pragma once
 
+#include <initializer_list>
 #include <queue>
 #include <renderer/buffer.h>
 #include <renderer/common.h>
@@ -18,6 +19,7 @@ namespace renderer
 		struct CommandBufferDeleter
 		{
 			Device* device;
+			void* optick_previous;
 			void operator()( renderer::CommandBuffer* cmd ) const;
 		};
 		using CommandBuffer = std::unique_ptr<renderer::CommandBuffer, CommandBufferDeleter>;
@@ -35,7 +37,7 @@ namespace renderer
 		void wait_idle();
 
 		raii::CommandBuffer grab_command_buffer();
-		void release_command_buffer( CommandBuffer* buffer );
+		void release_command_buffer( CommandBuffer* buffer, void* optick_previous );
 
 		raii::Texture create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples = 1 );
 		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect );
@@ -49,11 +51,14 @@ namespace renderer
 										const raii::ShaderCode& fragment_code,
 										const BindlessManager& bindless_manager );
 
-		void submit( CommandBuffer& buffer, vk::Fence signal_fence );
+		raii::Fence create_fence( bool signaled = false );
+		void wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout );
+
+		void submit( CommandBuffer& buffer, Fence signal_fence );
 
 		const Extent2D& get_extent() const { return _extent; }
 
-		//	private:
+	private:
 		sdl::raii::Window _window;
 		Extent2D _extent;
 		vk::raii::Context _context;
@@ -78,7 +83,7 @@ namespace renderer
 	{
 		inline void CommandBufferDeleter::operator()( renderer::CommandBuffer* cmd ) const
 		{
-			device->release_command_buffer( cmd );
+			device->release_command_buffer( cmd, optick_previous );
 		}
 	}
 }

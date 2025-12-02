@@ -9,6 +9,7 @@ namespace renderer
 	public:
 		enum class Usage : std::underlying_type_t<vk::BufferUsageFlagBits>
 		{
+			NONE = 0,
 			TRANSFER_SRC = vk::BufferUsageFlagBits::eTransferSrc,
 			TRANSFER_DST = vk::BufferUsageFlagBits::eTransferDst,
 			STORAGE_BUFFER = vk::BufferUsageFlagBits::eStorageBuffer,
@@ -16,14 +17,34 @@ namespace renderer
 			SHADER_DEVICE_ADDRESS = vk::BufferUsageFlagBits::eShaderDeviceAddress
 		};
 
+		Buffer() = default;
+		vk::DeviceAddress get_device_address() const { return _address; }
 		void* get_mapped_address() const { return _mapped_address; }
+		std::size_t get_size() const { return _size; }
+		Usage get_usage() const { return _usage; }
 
-		// private:
+	protected:
+		vk::Buffer get_buffer() const { return _buffer; }
+
+	private:
+		Buffer( vk::Buffer buffer, vk::DeviceAddress address, void* mapped_address, std::size_t size, Usage usage )
+			: _buffer( buffer )
+			, _address( address )
+			, _mapped_address( mapped_address )
+			, _size( size )
+			, _usage( usage )
+		{
+		}
+
 		vk::Buffer _buffer;
 		vk::DeviceAddress _address;
-		void* _mapped_address;
-		std::size_t _size;
-		Usage _usage;
+
+	protected:
+		void* _mapped_address = nullptr;
+
+	private:
+		std::size_t _size = 0;
+		Usage _usage = Usage::NONE;
 
 		friend class CommandBuffer;
 		friend class Device;
@@ -44,7 +65,7 @@ namespace renderer
 		{
 		public:
 			Buffer() = default;
-			~Buffer() { _allocation.destroy( _buffer ); }
+			~Buffer() { _allocation.destroy( get_buffer() ); }
 			Buffer( const Buffer& ) = delete;
 			Buffer& operator=( const Buffer& ) = delete;
 

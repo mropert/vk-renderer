@@ -6,6 +6,10 @@
 #include <renderer/device.h>
 #include <renderer/texture.h>
 
+#ifdef USE_OPTICK
+#include <optick.h>
+#endif
+
 renderer::Swapchain::Swapchain( Device& device, Texture::Format format )
 	: _device( &device )
 {
@@ -38,7 +42,7 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format )
 
 	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
 	{
-		_frames_data[ i ].render_fence = device._device.createFence( vk::FenceCreateInfo { .flags = vk::FenceCreateFlagBits::eSignaled } );
+		_frames_data[ i ].render_fence = device.create_fence( true );
 		_frames_data[ i ].render_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
 		_frames_data[ i ].swapchain_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
 	}
@@ -84,6 +88,10 @@ void renderer::Swapchain::submit( CommandBuffer& buffer )
 
 void renderer::Swapchain::present()
 {
+#ifdef USE_OPTICK
+	::Optick::GpuFlip( static_cast<VkSwapchainKHR>( *_swapchain ) );
+#endif
+
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
 	const auto result = _device->_gfx_queue.presentKHR(
 		vk::PresentInfoKHR { .waitSemaphoreCount = 1,

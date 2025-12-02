@@ -3,6 +3,11 @@
 #include <renderer/device.h>
 #include <renderer/swapchain.h>
 
+#ifdef USE_OPTICK
+#include <optick.h>
+#endif
+
+
 int main()
 {
 	renderer::Device device( "clear_color" );
@@ -41,4 +46,9 @@ int main()
 	}
 	// Wait idle before we start running the destructors
 	device.wait_idle();
+
+// Also shutdown optick if enabled (no API way to unregister a GPU :/)
+#ifdef USE_OPTICK
+	OPTICK_SHUTDOWN();
+#endif
 }

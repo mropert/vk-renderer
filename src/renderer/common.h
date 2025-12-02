@@ -83,6 +83,9 @@ namespace renderer
 	inline constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 	using Extent2D = ::vk::Extent2D;
 
+	// VkFence isn't worth the code to wrap it, it's a just handle for us
+	using Fence = ::vk::Fence;
+
 	class Error : public std::runtime_error
 	{
 	public:
@@ -112,4 +115,9 @@ namespace renderer
 	private:
 		VkResult _error = VK_SUCCESS;
 	};
+
+	namespace raii
+	{
+		using Fence = ::vk::raii::Fence;
+	}
 }

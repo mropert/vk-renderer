@@ -37,6 +37,7 @@ namespace renderer
 
 		enum class Usage : std::underlying_type_t<vk::ImageUsageFlagBits>
 		{
+			NONE = 0,
 			TRANSFER_SRC = vk::ImageUsageFlagBits::eTransferSrc,
 			TRANSFER_DST = vk::ImageUsageFlagBits::eTransferDst,
 			SAMPLED = vk::ImageUsageFlagBits::eSampled,
@@ -44,15 +45,29 @@ namespace renderer
 			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment,
 		};
 
+		Texture() = default;
+
 		Format get_format() const { return _format; }
 		Usage get_usage() const { return _usage; }
 		Extent2D get_extent() const { return _extent; }
 		int get_samples() const { return _samples; }
 
-		// private:
+	protected:
+		vk::Image get_image() const { return _image; }
+
+	private:
+		Texture( vk::Image image, Format format, Usage usage, Extent2D extent, int samples = 1 )
+			: _image( image )
+			, _format( format )
+			, _usage( usage )
+			, _extent( extent )
+			, _samples( samples )
+		{
+		}
+
 		vk::Image _image;
-		Format _format;
-		Usage _usage;
+		Format _format = Format::UNDEFINED;
+		Usage _usage = Usage::NONE;
 		Extent2D _extent;
 		int _samples = 1;
 		Layout _layout = Layout::UNDEFINED;
@@ -90,7 +105,7 @@ namespace renderer
 		{
 		public:
 			Texture() = default;
-			~Texture() { _allocation.destroy( _image ); }
+			~Texture() { _allocation.destroy( get_image() ); }
 			Texture( const Texture& ) = delete;
 			Texture& operator=( const Texture& ) = delete;
 

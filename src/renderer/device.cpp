@@ -9,6 +9,10 @@
 #include <renderer/pipeline.h>
 #include <renderer/shader.h>
 
+#ifdef USE_OPTICK
+#include <optick.h>
+#endif
+
 renderer::Device::Device( const char* appname )
 {
 	if ( !SDL_Init( SDL_INIT_VIDEO ) )
@@ -116,6 +120,13 @@ renderer::Device::Device( const char* appname )
 		_command_buffers.push_back( CommandBuffer( std::move( buffer ) ) );
 		_available_command_buffers.push( &_command_buffers.back() );
 	}
+
+#ifdef USE_OPTICK
+	VkDevice optick_device = *_device;
+	VkPhysicalDevice optick_physical_device = *_physical_device;
+	VkQueue optick_queue = *_gfx_queue;
+	Optick::InitGpuVulkan( &optick_device, &optick_physical_device, &optick_queue, &_gfx_queue_family_index, 1, nullptr );
+#endif
 }
 
 renderer::Device::~Device() = default;
@@ -127,13 +138,20 @@ void renderer::Device::wait_idle()
 
 renderer::raii::CommandBuffer renderer::Device::grab_command_buffer()
 {
-	raii::CommandBuffer cmd( _available_command_buffers.front(), raii::CommandBufferDeleter { this } );
+	auto cmd = _available_command_buffers.front();
 	_available_command_buffers.pop();
-	return cmd;
+	void* optick_previous = nullptr;
+#ifdef USE_OPTICK
+	optick_previous = Optick::SetGpuContext( Optick::GPUContext( static_cast<VkCommandBuffer>( *cmd->_cmd_buffer ) ) ).cmdBuffer;
+#endif
+	return raii::CommandBuffer( cmd, raii::CommandBufferDeleter { this, optick_previous } );
 }
 
-void renderer::Device::release_command_buffer( CommandBuffer* buffer )
+void renderer::Device::release_command_buffer( CommandBuffer* buffer, [[maybe_unused]] void* optick_previous )
 {
+#ifdef USE_OPTICK
+	Optick::SetGpuContext( Optick::GPUContext( optick_previous ) );
+#endif
 	_available_command_buffers.push( buffer );
 }
 
@@ -160,7 +178,7 @@ renderer::raii::Texture renderer::Device::create_texture( Texture::Format format
 		throw Error( "Failed to create image", ret );
 	}
 
-	return raii::Texture( renderer::Texture { image, format, usage, extent, samples },
+	return raii::Texture( renderer::Texture( image, format, usage, extent, samples ),
 						  vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
@@ -210,7 +228,7 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 		address = _device.getBufferAddress( vk::BufferDeviceAddressInfo { .buffer = buffer } );
 	}
 
-	return raii::Buffer( renderer::Buffer { buffer, address, allocation_info.pMappedData, size, usage },
+	return raii::Buffer( renderer::Buffer( buffer, address, allocation_info.pMappedData, size, usage ),
 						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
@@ -277,6 +295,18 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 	auto pipeline = _device.createGraphicsPipeline( nullptr, pipeline_info );
 
 	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc );
+}
+
+renderer::raii::Fence renderer::Device::create_fence( bool signaled )
+{
+	return _device.createFence(
+		vk::FenceCreateInfo { .flags = signaled ? vk::FenceCreateFlagBits::eSignaled : vk::FenceCreateFlagBits {} } );
+}
+
+void renderer::Device::wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout )
+{
+	// We can safely ignore the return value, VulkanHpp already throws an exception on failure
+	(void)_device.waitForFences( fences, true, timeout );
 }
 
 void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )

@@ -47,9 +47,19 @@ target_include_directories(renderer PUBLIC src)
 target_link_libraries(renderer PRIVATE SDL3::SDL3 VkBoostrap unofficial::shaderc::shaderc)
 target_link_libraries(renderer PUBLIC Vulkan::Vulkan VulkanHppModule GPUOpen::VulkanMemoryAllocator)
 
+if( OPTICK_FOUND )
+	target_compile_definitions(renderer PRIVATE USE_OPTICK)
+	target_link_libraries(renderer PRIVATE Optick)
+endif()
+
 add_executable(clear_color)
 target_sources(clear_color PRIVATE examples/clear_color.cpp)
 target_link_libraries(clear_color PRIVATE renderer SDL3::SDL3)
+
+if( OPTICK_FOUND )
+	target_compile_definitions(clear_color PRIVATE USE_OPTICK)
+	target_link_libraries(clear_color PRIVATE Optick)
+endif()
 
 set_target_properties(clear_color PROPERTIES
     VS_DEBUGGER_ENVIRONMENT "VK_ADD_LAYER_PATH=${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"

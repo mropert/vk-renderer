@@ -20,10 +20,10 @@ namespace renderer
 		void submit( CommandBuffer& buffer );
 		void present();
 
-		//	private:
+	private:
 		struct FrameData
 		{
-			vk::raii::Fence render_fence = nullptr;
+			raii::Fence render_fence = nullptr;
 			vk::raii::Semaphore render_semaphore = nullptr;
 			vk::raii::Semaphore swapchain_semaphore = nullptr;
 		};

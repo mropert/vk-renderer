@@ -47,8 +47,6 @@ namespace renderer
 
 		void draw_indexed( const Buffer& index_buffer );
 
-		VkCommandBuffer get_optick_context() const { return *_cmd_buffer; }
-
 	private:
 		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )
 			: _cmd_buffer( std::move( cmd_buffer ) )
