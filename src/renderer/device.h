@@ -32,6 +32,8 @@ namespace renderer
 		explicit Device( const char* appname );
 		~Device();
 
+		void wait_idle();
+
 		raii::CommandBuffer grab_command_buffer();
 		void release_command_buffer( CommandBuffer* buffer );
 
@@ -49,9 +51,9 @@ namespace renderer
 
 		void submit( CommandBuffer& buffer, vk::Fence signal_fence );
 
-		//	private:
 		const Extent2D& get_extent() const { return _extent; }
 
+		//	private:
 		sdl::raii::Window _window;
 		Extent2D _extent;
 		vk::raii::Context _context;

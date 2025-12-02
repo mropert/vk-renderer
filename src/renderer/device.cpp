@@ -30,7 +30,7 @@ renderer::Device::Device( const char* appname )
 	const auto exts = SDL_Vulkan_GetInstanceExtensions( &ext_count );
 
 	const auto vk_instance_result = vkb::InstanceBuilder()
-										.set_app_name( "Brutus-ng Vulkan" )
+										.set_app_name( appname )
 #if _DEBUG
 										.enable_validation_layers( true )
 #endif
@@ -119,6 +119,11 @@ renderer::Device::Device( const char* appname )
 }
 
 renderer::Device::~Device() = default;
+
+void renderer::Device::wait_idle()
+{
+	_device.waitIdle();
+}
 
 renderer::raii::CommandBuffer renderer::Device::grab_command_buffer()
 {
