@@ -12,6 +12,7 @@ namespace renderer
 			NONE = 0,
 			TRANSFER_SRC = vk::BufferUsageFlagBits::eTransferSrc,
 			TRANSFER_DST = vk::BufferUsageFlagBits::eTransferDst,
+			UNIFORM_BUFFER = vk::BufferUsageFlagBits::eUniformBuffer,
 			STORAGE_BUFFER = vk::BufferUsageFlagBits::eStorageBuffer,
 			INDEX_BUFFER = vk::BufferUsageFlagBits::eIndexBuffer,
 			SHADER_DEVICE_ADDRESS = vk::BufferUsageFlagBits::eShaderDeviceAddress

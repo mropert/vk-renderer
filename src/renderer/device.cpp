@@ -167,7 +167,7 @@ renderer::raii::Texture renderer::Device::create_texture( Texture::Format format
 								   .tiling = VK_IMAGE_TILING_OPTIMAL,
 								   .usage = static_cast<VkImageUsageFlags>( usage ) };
 
-	const VmaAllocationCreateInfo create_info { .usage = VMA_MEMORY_USAGE_GPU_ONLY, .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+	const VmaAllocationCreateInfo create_info { .usage = VMA_MEMORY_USAGE_AUTO };
 
 	VkImage image {};
 	VmaAllocation allocation {};
@@ -210,8 +210,10 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 	const VkBufferCreateInfo buffer_Info { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 										   .size = size,
 										   .usage = static_cast<VkBufferUsageFlags>( usage ) };
-	const VmaAllocationCreateInfo vma_alloc_info = { .flags = upload ? VMA_ALLOCATION_CREATE_MAPPED_BIT : 0u,
-													 .usage = upload ? VMA_MEMORY_USAGE_CPU_TO_GPU : VMA_MEMORY_USAGE_GPU_ONLY };
+	const VmaAllocationCreateInfo vma_alloc_info = {
+		.flags = upload ? ( VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT ) : 0u,
+		.usage = VMA_MEMORY_USAGE_AUTO
+	};
 
 	VkBuffer buffer {};
 	VmaAllocation allocation {};
