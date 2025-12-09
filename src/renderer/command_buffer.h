@@ -45,6 +45,7 @@ namespace renderer
 			push_constants( pipeline, &data, sizeof( T ) );
 		}
 
+		void draw( uint32_t count );
 		void draw_indexed( const Buffer& index_buffer );
 
 	private:

@@ -146,6 +146,11 @@ void renderer::CommandBuffer::set_viewport( Extent2D extent )
 	_cmd_buffer.setViewport( 0, viewport );
 }
 
+void renderer::CommandBuffer::draw( uint32_t count )
+{
+	_cmd_buffer.draw( count, 1, 0, 0 );
+}
+
 void renderer::CommandBuffer::draw_indexed( const Buffer& index_buffer )
 {
 	assert( ( index_buffer._usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER );
