@@ -25,10 +25,13 @@ renderer::Device::Device( const char* appname )
 
 	_extent = { .width = static_cast<uint32_t>( mode->w ), .height = static_cast<uint32_t>( mode->h ) };
 	_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN ) );
+
 	if ( !_window )
 	{
 		throw Error( SDL_GetError() );
 	}
+
+	SDL_SetWindowRelativeMouseMode( _window.get(), true );
 
 	Uint32 ext_count = 0;
 	const auto exts = SDL_Vulkan_GetInstanceExtensions( &ext_count );
