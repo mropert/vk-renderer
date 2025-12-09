@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <filesystem>
 #include <renderer/common.h>
 #include <string_view>
 
@@ -25,9 +26,12 @@ namespace renderer
 	class ShaderCompiler
 	{
 	public:
-		ShaderCompiler();
+		explicit ShaderCompiler( std::filesystem::path base_dir );
 		~ShaderCompiler();
 
+		// Read file and compile
+		std::expected<raii::ShaderCode, std::string> compile( ShaderStage stage, std::string_view filename ) const;
+		// Compile from memory source
 		std::expected<raii::ShaderCode, std::string> compile( ShaderStage stage, std::string_view source, std::string filename ) const;
 
 	private:

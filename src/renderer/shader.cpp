@@ -1,25 +1,98 @@
 #include "shader.h"
 
+#include <format>
+#include <fstream>
 #include <shaderc/shaderc.hpp>
 
+namespace
+{
+	struct ShaderSource
+	{
+		std::string filename;
+		std::string content;
+	};
+
+	ShaderSource read_source( const std::filesystem::path& path )
+	{
+		std::ifstream istream( path );
+		if ( !istream )
+		{
+			return {};
+		}
+		std::string source { std::istreambuf_iterator<char>( istream ), std::istreambuf_iterator<char>() };
+		return { path.string(), std::move( source ) };
+	}
+
+	struct ShaderIncluder final : public shaderc::CompileOptions::IncluderInterface
+	{
+		explicit ShaderIncluder( const std::filesystem::path& dir )
+			: base_dir( dir )
+		{
+		}
+
+		shaderc_include_result* GetInclude( const char* requested_source, shaderc_include_type, const char*, size_t ) override
+		{
+			auto source = new ShaderSource( read_source( base_dir / requested_source ) );
+			if ( source->filename.empty() )
+			{
+				source->content = std::format( "Couldn't open shader include file '{}'", requested_source );
+			}
+			auto result = new shaderc_include_result;
+			result->source_name = source->filename.empty() ? nullptr : source->filename.c_str();
+			result->source_name_length = source->filename.size();
+			result->content = source->content.c_str();
+			result->content_length = source->content.size();
+			result->user_data = source;
+			return result;
+		}
+
+		void ReleaseInclude( shaderc_include_result* data ) override
+		{
+			delete static_cast<ShaderSource*>( data->user_data );
+			delete data;
+		}
+
+		const std::filesystem::path& base_dir;
+	};
+}
 
 struct renderer::ShaderCompiler::Impl
 {
+	explicit Impl( std::filesystem::path dir )
+		: base_dir( std::move( dir ) )
+	{
+	}
+
 	shaderc::Compiler compiler;
+	std::filesystem::path base_dir;
 };
 
-renderer::ShaderCompiler::ShaderCompiler()
-	: _impl( std::make_unique<Impl>() )
+renderer::ShaderCompiler::ShaderCompiler( std::filesystem::path base_dir )
+	: _impl( std::make_unique<Impl>( std::move( base_dir ) ) )
 {
 }
 
 renderer::ShaderCompiler::~ShaderCompiler() = default;
+
+std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderStage stage,
+																						  std::string_view filename ) const
+{
+	const auto path = _impl->base_dir / filename;
+	std::ifstream istream( path );
+	if ( !istream )
+	{
+		return std::unexpected( std::format( "Couldn't open shader file '{}'", path.string() ) );
+	}
+	const std::string source { std::istreambuf_iterator<char>( istream ), std::istreambuf_iterator<char>() };
+	return compile( stage, source, path.string() );
+}
 
 std::expected<renderer::raii::ShaderCode, std::string>
 renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, std::string filename ) const
 {
 	shaderc::CompileOptions options;
 	options.SetOptimizationLevel( shaderc_optimization_level_performance );
+	options.SetIncluder( std::make_unique<ShaderIncluder>( _impl->base_dir ) );
 
 	const auto result = _impl->compiler.CompileGlslToSpv( source.data(),
 														  source.size(),
