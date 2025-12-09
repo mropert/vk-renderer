@@ -246,8 +246,13 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 
 	const vk::PushConstantRange constants { .stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = desc.push_constants_size };
 	const auto desc_layout = bindless_manager.get_layout();
-	auto layout = _device.createPipelineLayout(
-		{ .setLayoutCount = 1, .pSetLayouts = &desc_layout, .pushConstantRangeCount = 1, .pPushConstantRanges = &constants } );
+	vk::PipelineLayoutCreateInfo layout_create_info { .setLayoutCount = 1, .pSetLayouts = &desc_layout };
+	if ( constants.size > 0 )
+	{
+		layout_create_info.pushConstantRangeCount = 1;
+		layout_create_info.pPushConstantRanges = &constants;
+	}
+	auto layout = _device.createPipelineLayout( layout_create_info );
 
 	const vk::PipelineVertexInputStateCreateInfo vertex_input;
 	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = static_cast<vk::PrimitiveTopology>( desc.topology ) };
