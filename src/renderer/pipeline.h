@@ -10,10 +10,17 @@ namespace renderer
 	class Pipeline
 	{
 	public:
+		enum class PrimitiveTopology : std::underlying_type_t<vk::PrimitiveTopology>
+		{
+			TRIANGLE_LIST = vk::PrimitiveTopology::eTriangleList,
+			TRIANGLE_STRIP = vk::PrimitiveTopology::eTriangleStrip,
+		};
+
 		struct Desc
 		{
 			Texture::Format color_format;
 			Texture::Format depth_format;
+			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
 			uint32_t push_constants_size = 0;
 		};
 

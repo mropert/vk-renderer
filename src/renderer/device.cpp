@@ -250,7 +250,7 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 		{ .setLayoutCount = 1, .pSetLayouts = &desc_layout, .pushConstantRangeCount = 1, .pPushConstantRanges = &constants } );
 
 	const vk::PipelineVertexInputStateCreateInfo vertex_input;
-	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = vk::PrimitiveTopology::eTriangleList };
+	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = static_cast<vk::PrimitiveTopology>( desc.topology ) };
 	const vk::PipelineViewportStateCreateInfo viewport { .viewportCount = 1, .scissorCount = 1 };
 	const vk::PipelineRasterizationStateCreateInfo rasterizer { .polygonMode = vk::PolygonMode::eFill,
 																.cullMode = vk::CullModeFlagBits::eNone,
