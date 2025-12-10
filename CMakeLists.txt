@@ -8,6 +8,7 @@ add_compile_options(/Zi /MP)
 add_link_options(/DEBUG)
 
 find_package(SDL3 CONFIG REQUIRED)
+find_package(TBB CONFIG REQUIRED)
 find_package(unofficial-shaderc CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
@@ -37,6 +38,7 @@ target_sources(renderer
 		src/renderer/command_buffer.cpp
 		src/renderer/device.cpp
 		src/renderer/pipeline.cpp
+		src/renderer/pipeline_manager.cpp
 		src/renderer/sampler.cpp
 		src/renderer/shader.cpp
 		src/renderer/swapchain.cpp
@@ -44,7 +46,7 @@ target_sources(renderer
 		src/renderer/vma_impl.cpp
 )
 target_include_directories(renderer PUBLIC src)
-target_link_libraries(renderer PRIVATE SDL3::SDL3 VkBoostrap unofficial::shaderc::shaderc)
+target_link_libraries(renderer PRIVATE SDL3::SDL3 VkBoostrap unofficial::shaderc::shaderc TBB::tbb)
 target_link_libraries(renderer PUBLIC Vulkan::Vulkan VulkanHppModule GPUOpen::VulkanMemoryAllocator)
 
 if( OPTICK_FOUND )
