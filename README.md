@@ -11,10 +11,10 @@ Check examples to get an idea of how this work.
 
 ## Building
 
-This requires Vulkan, Vulkan Memory Allocator (VMA), shaderc and SDL3. Easiest way to make it work is to use vcpkg:
+This requires Vulkan, Vulkan Memory Allocator (VMA), shaderc, SDL3 and TBB. Easiest way to make it work is to use vcpkg:
 
 ```
-vcpkg install vulkan vulkan-validationlayers vulkan-memory-allocator shaderc sdl3
+vcpkg install vulkan vulkan-validationlayers vulkan-memory-allocator shaderc sdl3 tbb
 ```
 
 This library also uses VkBootstrap but the source is included under `third_party` for convenience as it's not on vckpg.
