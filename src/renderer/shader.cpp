@@ -93,6 +93,9 @@ renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, s
 	shaderc::CompileOptions options;
 	options.SetOptimizationLevel( shaderc_optimization_level_performance );
 	options.SetIncluder( std::make_unique<ShaderIncluder>( _impl->base_dir ) );
+#ifdef _DEBUG
+	options.SetGenerateDebugInfo();
+#endif
 
 	const auto result = _impl->compiler.CompileGlslToSpv( source.data(),
 														  source.size(),
