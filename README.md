@@ -18,3 +18,12 @@ vcpkg install vulkan vulkan-validationlayers vulkan-memory-allocator shaderc sdl
 ```
 
 This library also uses VkBootstrap but the source is included under `third_party` for convenience as it's not on vckpg.
+
+## Profiling
+
+The library has instrumentation profiling support using Optick (https://github.com/bombomby/optick).
+
+If an `Optick` target is found in CMake's context, CPU and GPU event scopes will be added for most non-trivial operations.
+
+As mentioned in examples, Optick has no way to unregister a GPU once set. You will need to call `OPTICK_SHUTDOWN()` before
+running the `renderer::Device` destructors.

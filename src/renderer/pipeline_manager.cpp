@@ -1,6 +1,7 @@
 #include "pipeline_manager.h"
 
 #include <renderer/device.h>
+#include <renderer/details/profiler.h>
 #include <tbb/tbb.h>
 
 namespace
@@ -24,6 +25,7 @@ renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::pat
 	, _rebuild_thread(
 		  [ & ]( std::stop_token tok )
 		  {
+			  OPTICK_THREAD( "pipeline_rebuild" );
 			  while ( !tok.stop_requested() )
 			  {
 				  rebuild_job();
@@ -51,6 +53,7 @@ renderer::PipelineHandle renderer::PipelineManager::add( const Pipeline::Desc& d
 
 void renderer::PipelineManager::update()
 {
+	OPTICK_EVENT();
 	std::scoped_lock lock( _mtx );
 	for ( auto& [ handle, item ] : _updated_items )
 	{
@@ -74,6 +77,7 @@ renderer::Pipeline renderer::PipelineManager::get( PipelineHandle pipeline ) con
 renderer::raii::Pipeline
 renderer::PipelineManager::make( const Pipeline::Desc& desc, std::string_view vs_path, std::string_view fs_path ) const
 {
+	OPTICK_EVENT();
 	renderer::raii::ShaderCode vertex_shader;
 	renderer::raii::ShaderCode fragment_shader;
 	tbb::parallel_invoke( [ & ] { vertex_shader = compile_shader( _compiler, vs_path, renderer::ShaderStage::VERTEX ); },
@@ -102,6 +106,7 @@ namespace
 
 void renderer::PipelineManager::rebuild_job()
 {
+	OPTICK_EVENT();
 	std::vector<RebuildRequest> to_rebuild;
 	{
 		std::scoped_lock lock( _mtx );

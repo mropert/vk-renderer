@@ -20,7 +20,6 @@ namespace renderer
 		struct CommandBufferDeleter
 		{
 			Device* device;
-			void* optick_previous;
 			void operator()( renderer::CommandBuffer* cmd ) const;
 		};
 		using CommandBuffer = std::unique_ptr<renderer::CommandBuffer, CommandBufferDeleter>;
@@ -38,7 +37,7 @@ namespace renderer
 		void wait_idle();
 
 		raii::CommandBuffer grab_command_buffer();
-		void release_command_buffer( CommandBuffer* buffer, void* optick_previous );
+		void release_command_buffer( CommandBuffer* buffer );
 
 		raii::Texture create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples = 1 );
 		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect );
@@ -91,7 +90,7 @@ namespace renderer
 	{
 		inline void CommandBufferDeleter::operator()( renderer::CommandBuffer* cmd ) const
 		{
-			device->release_command_buffer( cmd, optick_previous );
+			device->release_command_buffer( cmd );
 		}
 	}
 }

@@ -1,9 +1,9 @@
 #include "shader.h"
-#include "shader.h"
 
 #include <format>
 #include <fstream>
 #include <shaderc/shaderc.hpp>
+#include <renderer/details/profiler.h>
 
 namespace
 {
@@ -96,6 +96,7 @@ std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler:
 std::expected<renderer::raii::ShaderCode, std::string>
 renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, std::string filename ) const
 {
+	OPTICK_EVENT();
 	shaderc::CompileOptions options;
 	options.SetOptimizationLevel( shaderc_optimization_level_performance );
 	options.SetIncluder( std::make_unique<ShaderIncluder>( _impl->base_dir ) );

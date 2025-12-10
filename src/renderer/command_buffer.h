@@ -57,6 +57,7 @@ namespace renderer
 		void push_constants( const Pipeline& pipeline, const void* data, std::size_t size );
 
 		vk::raii::CommandBuffer _cmd_buffer;
+		void* _optick_previous = nullptr;
 
 		friend class Device;
 		friend class Swapchain;

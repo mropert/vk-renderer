@@ -3,17 +3,25 @@
 #include <cassert>
 #include <renderer/bindless.h>
 #include <renderer/buffer.h>
+#include <renderer/details/profiler.h>
 #include <renderer/pipeline.h>
 #include <renderer/texture.h>
 
 void renderer::CommandBuffer::begin()
 {
 	_cmd_buffer.begin( vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit } );
+#ifdef USE_OPTICK
+	_optick_previous = Optick::SetGpuContext( Optick::GPUContext( static_cast<VkCommandBuffer>( *_cmd_buffer ) ) ).cmdBuffer;
+#endif
 }
 
 void renderer::CommandBuffer::end()
 {
 	_cmd_buffer.end();
+#ifdef USE_OPTICK
+	Optick::SetGpuContext( Optick::GPUContext( _optick_previous ) );
+	_optick_previous = nullptr;
+#endif
 }
 
 void renderer::CommandBuffer::reset()

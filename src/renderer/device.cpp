@@ -1,6 +1,4 @@
 #include "device.h"
-#include "device.h"
-#include "device.h"
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
@@ -8,15 +6,14 @@
 #include <print>
 #include <renderer/bindless.h>
 #include <renderer/command_buffer.h>
+#include <renderer/details/profiler.h>
 #include <renderer/pipeline.h>
 #include <renderer/shader.h>
 
-#ifdef USE_OPTICK
-#include <optick.h>
-#endif
-
 renderer::Device::Device( const char* appname )
 {
+	OPTICK_EVENT();
+
 	if ( !SDL_Init( SDL_INIT_VIDEO ) )
 	{
 		throw Error( SDL_GetError() );
@@ -145,23 +142,17 @@ renderer::raii::CommandBuffer renderer::Device::grab_command_buffer()
 {
 	auto cmd = _available_command_buffers.front();
 	_available_command_buffers.pop();
-	void* optick_previous = nullptr;
-#ifdef USE_OPTICK
-	optick_previous = Optick::SetGpuContext( Optick::GPUContext( static_cast<VkCommandBuffer>( *cmd->_cmd_buffer ) ) ).cmdBuffer;
-#endif
-	return raii::CommandBuffer( cmd, raii::CommandBufferDeleter { this, optick_previous } );
+	return raii::CommandBuffer( cmd, raii::CommandBufferDeleter { this } );
 }
 
-void renderer::Device::release_command_buffer( CommandBuffer* buffer, [[maybe_unused]] void* optick_previous )
+void renderer::Device::release_command_buffer( CommandBuffer* buffer )
 {
-#ifdef USE_OPTICK
-	Optick::SetGpuContext( Optick::GPUContext( optick_previous ) );
-#endif
 	_available_command_buffers.push( buffer );
 }
 
 renderer::raii::Texture renderer::Device::create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples )
 {
+	OPTICK_EVENT();
 	const VkImageCreateInfo info { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 								   .imageType = VK_IMAGE_TYPE_2D,
 								   .format = static_cast<VkFormat>( format ),
@@ -205,6 +196,7 @@ renderer::raii::TextureView renderer::Device::create_texture_view( const Texture
 
 renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter )
 {
+	OPTICK_EVENT();
 	auto sampler = _device.createSampler(
 		vk::SamplerCreateInfo { .magFilter = static_cast<vk::Filter>( filter ), .minFilter = static_cast<vk::Filter>( filter ) } );
 	return raii::Sampler( std::move( sampler ) );
@@ -212,6 +204,7 @@ renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter
 
 renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std::size_t size, bool upload )
 {
+	OPTICK_EVENT();
 	const VkBufferCreateInfo buffer_Info { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 										   .size = size,
 										   .usage = static_cast<VkBufferUsageFlags>( usage ) };
@@ -244,6 +237,7 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 															const raii::ShaderCode& fragment_code,
 															const BindlessManager& bindless_manager )
 {
+	OPTICK_EVENT();
 	const auto vertex_shader = _device.createShaderModule(
 		{ .codeSize = vertex_code.get_size() * sizeof( uint32_t ), .pCode = vertex_code.get_data() } );
 	const auto fragment_shader = _device.createShaderModule(
@@ -311,18 +305,21 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 
 renderer::raii::Fence renderer::Device::create_fence( bool signaled )
 {
+	OPTICK_EVENT();
 	return _device.createFence(
 		vk::FenceCreateInfo { .flags = signaled ? vk::FenceCreateFlagBits::eSignaled : vk::FenceCreateFlagBits {} } );
 }
 
 void renderer::Device::wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout )
 {
+	OPTICK_EVENT();
 	// We can safely ignore the return value, VulkanHpp already throws an exception on failure
 	(void)_device.waitForFences( fences, true, timeout );
 }
 
 void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 {
+	OPTICK_EVENT();
 	const vk::CommandBufferSubmitInfo info { .commandBuffer = buffer._cmd_buffer };
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
 }
@@ -334,6 +331,7 @@ void renderer::Device::queue_deletion( raii::Pipeline pipeline )
 
 void renderer::Device::notify_present()
 {
+	OPTICK_EVENT();
 	_delete_index = ( _delete_index + 1 ) % MAX_FRAMES_IN_FLIGHT;
 	_delete_queue[ _delete_index ].clear();
 }
