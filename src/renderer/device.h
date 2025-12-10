@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <initializer_list>
 #include <queue>
 #include <renderer/buffer.h>
@@ -58,7 +59,12 @@ namespace renderer
 
 		const Extent2D& get_extent() const { return _extent; }
 
+		// Queue resource for deletion once MAX_FRAMES_IN_FLIGHT have been submitted for presentation
+		void queue_deletion( raii::Pipeline pipeline );
+
 	private:
+		void notify_present();
+
 		sdl::raii::Window _window;
 		Extent2D _extent;
 		vk::raii::Context _context;
@@ -74,6 +80,8 @@ namespace renderer
 		vk::raii::CommandPool _command_pool = nullptr;
 		std::vector<CommandBuffer> _command_buffers;
 		std::queue<CommandBuffer*> _available_command_buffers;
+		std::array<std::vector<raii::Pipeline>, MAX_FRAMES_IN_FLIGHT> _delete_queue;
+		uint32_t _delete_index = 0;
 
 		friend class BindlessManager;
 		friend class Swapchain;

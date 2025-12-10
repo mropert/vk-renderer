@@ -1,4 +1,5 @@
 #include "shader.h"
+#include "shader.h"
 
 #include <format>
 #include <fstream>
@@ -73,6 +74,11 @@ renderer::ShaderCompiler::ShaderCompiler( std::filesystem::path base_dir )
 }
 
 renderer::ShaderCompiler::~ShaderCompiler() = default;
+
+const std::filesystem::path& renderer::ShaderCompiler::get_base_directory() const
+{
+	return _impl->base_dir;
+}
 
 std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderStage stage,
 																						  std::string_view filename ) const

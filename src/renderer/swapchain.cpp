@@ -99,6 +99,7 @@ void renderer::Swapchain::present()
 							 .swapchainCount = 1,
 							 .pSwapchains = &*_swapchain,
 							 .pImageIndices = &_current_image } );
+	_device->notify_present();
 	++_frame_count;
 	if ( result != vk::Result::eSuccess )
 	{

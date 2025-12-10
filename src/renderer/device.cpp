@@ -1,4 +1,6 @@
 #include "device.h"
+#include "device.h"
+#include "device.h"
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
@@ -323,4 +325,15 @@ void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 {
 	const vk::CommandBufferSubmitInfo info { .commandBuffer = buffer._cmd_buffer };
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
+}
+
+void renderer::Device::queue_deletion( raii::Pipeline pipeline )
+{
+	_delete_queue[ _delete_index ].push_back( std::move( pipeline ) );
+}
+
+void renderer::Device::notify_present()
+{
+	_delete_index = ( _delete_index + 1 ) % MAX_FRAMES_IN_FLIGHT;
+	_delete_queue[ _delete_index ].clear();
 }
