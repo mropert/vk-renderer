@@ -9,6 +9,13 @@ I use C++ Modules and Exceptions, deal with it.
 
 Check examples to get an idea of how this work.
 
+## Features
+
+* No descriptor management! Bindless textures and buffers only.
+* Background pipeline hot reload when source code has changed
+
+Stuff is being added iteratively as I get a use case for them. This might lead to API refactoring/rewriting.
+
 ## Building
 
 This requires Vulkan, Vulkan Memory Allocator (VMA), shaderc, SDL3 and TBB. Easiest way to make it work is to use vcpkg:
