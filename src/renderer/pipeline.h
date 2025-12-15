@@ -16,11 +16,26 @@ namespace renderer
 			TRIANGLE_STRIP = vk::PrimitiveTopology::eTriangleStrip,
 		};
 
+		enum class CullMode : std::underlying_type_t<vk::CullModeFlagBits>
+		{
+			NONE = vk::CullModeFlagBits::eNone,
+			FRONT = vk::CullModeFlagBits::eFront,
+			BACK = vk::CullModeFlagBits::eBack
+		};
+
+		enum class FrontFace : std::underlying_type_t<vk::FrontFace>
+		{
+			COUNTER_CLOCKWISE = vk::FrontFace::eCounterClockwise,
+			CLOCKWISE = vk::FrontFace::eClockwise
+		};
+
 		struct Desc
 		{
 			Texture::Format color_format;
 			Texture::Format depth_format;
 			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
+			CullMode cull_mode = CullMode::FRONT;
+			FrontFace front_face = FrontFace::CLOCKWISE;
 			uint32_t push_constants_size = 0;
 		};
 

@@ -36,7 +36,7 @@ renderer::Device::Device( const char* appname )
 	const auto vk_instance_result = vkb::InstanceBuilder()
 										.set_app_name( appname )
 #if _DEBUG
-										.enable_validation_layers( true )
+										.request_validation_layers( true )
 #endif
 										.use_default_debug_messenger()
 										.require_api_version( 1, 3, 0 )
@@ -255,8 +255,8 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = static_cast<vk::PrimitiveTopology>( desc.topology ) };
 	const vk::PipelineViewportStateCreateInfo viewport { .viewportCount = 1, .scissorCount = 1 };
 	const vk::PipelineRasterizationStateCreateInfo rasterizer { .polygonMode = vk::PolygonMode::eFill,
-																.cullMode = vk::CullModeFlagBits::eNone,
-																.frontFace = vk::FrontFace::eClockwise,
+																.cullMode = static_cast<vk::CullModeFlagBits>( desc.cull_mode ),
+																.frontFace = static_cast<vk::FrontFace>( desc.front_face ),
 																.lineWidth = 1.f };
 	const vk::PipelineMultisampleStateCreateInfo multisampling { .rasterizationSamples = vk::SampleCountFlagBits::e4,
 																 .minSampleShading = 1.0f };

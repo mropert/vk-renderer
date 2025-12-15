@@ -159,12 +159,12 @@ void renderer::CommandBuffer::draw( uint32_t count )
 	_cmd_buffer.draw( count, 1, 0, 0 );
 }
 
-void renderer::CommandBuffer::draw_indexed( const Buffer& index_buffer )
+void renderer::CommandBuffer::draw_indexed( const Buffer& index_buffer, uint32_t instance_count )
 {
 	assert( ( index_buffer._usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER );
 	const auto count = index_buffer._size / sizeof( uint32_t );
 	_cmd_buffer.bindIndexBuffer( index_buffer._buffer, 0, vk::IndexType::eUint32 );
-	_cmd_buffer.drawIndexed( count, 1, 0, 0, 0 );
+	_cmd_buffer.drawIndexed( count, instance_count, 0, 0, 0 );
 }
 
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )
