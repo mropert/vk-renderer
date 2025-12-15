@@ -154,17 +154,20 @@ void renderer::CommandBuffer::set_viewport( Extent2D extent )
 	_cmd_buffer.setViewport( 0, viewport );
 }
 
+void renderer::CommandBuffer::bind_index_buffer( const Buffer& index_buffer )
+{
+	assert( ( index_buffer._usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER );
+	_cmd_buffer.bindIndexBuffer( index_buffer._buffer, 0, vk::IndexType::eUint32 );
+}
+
 void renderer::CommandBuffer::draw( uint32_t count )
 {
 	_cmd_buffer.draw( count, 1, 0, 0 );
 }
 
-void renderer::CommandBuffer::draw_indexed( const Buffer& index_buffer, uint32_t instance_count )
+void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_count, uint32_t first_index )
 {
-	assert( ( index_buffer._usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER );
-	const auto count = index_buffer._size / sizeof( uint32_t );
-	_cmd_buffer.bindIndexBuffer( index_buffer._buffer, 0, vk::IndexType::eUint32 );
-	_cmd_buffer.drawIndexed( count, instance_count, 0, 0, 0 );
+	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, 0 );
 }
 
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )
