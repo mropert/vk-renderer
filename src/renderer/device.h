@@ -58,8 +58,23 @@ namespace renderer
 
 		const Extent2D& get_extent() const { return _extent; }
 
+		void set_relative_mouse_mode( bool enabled );
+
 		// Queue resource for deletion once MAX_FRAMES_IN_FLIGHT have been submitted for presentation
 		void queue_deletion( raii::Pipeline pipeline );
+
+		// Renderer internals, can be queried if needed to interact with a 3rd party (eg: imgui)
+		struct Internals
+		{
+			uint32_t api_version;
+			SDL_Window* window;
+			VkInstance instance;
+			VkPhysicalDevice physical_device;
+			VkDevice device;
+			uint32_t queue_family;
+			VkQueue queue;
+		};
+		Internals get_internals() const;
 
 	private:
 		void notify_present();

@@ -15,6 +15,7 @@ namespace renderer
 		explicit Swapchain( Device& device, Texture::Format format );
 
 		uint32_t get_frame_count() const { return _frame_count; }
+		uint32_t get_image_count() const { return _images.size(); }
 
 		std::tuple<uint32_t, Texture, TextureView> acquire();
 		void submit( CommandBuffer& buffer );

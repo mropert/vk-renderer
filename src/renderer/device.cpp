@@ -30,8 +30,6 @@ renderer::Device::Device( const char* appname )
 		throw Error( SDL_GetError() );
 	}
 
-	SDL_SetWindowRelativeMouseMode( _window.get(), true );
-
 	Uint32 ext_count = 0;
 	const auto exts = SDL_Vulkan_GetInstanceExtensions( &ext_count );
 
@@ -324,9 +322,25 @@ void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
 }
 
+void renderer::Device::set_relative_mouse_mode( bool enabled )
+{
+	SDL_SetWindowRelativeMouseMode( _window.get(), enabled );
+}
+
 void renderer::Device::queue_deletion( raii::Pipeline pipeline )
 {
 	_delete_queue[ _delete_index ].push_back( std::move( pipeline ) );
+}
+
+renderer::Device::Internals renderer::Device::get_internals() const
+{
+	return Internals { .api_version = VK_API_VERSION_1_3,
+					   .window = _window.get(),
+					   .instance = *_instance,
+					   .physical_device = *_physical_device,
+					   .device = *_device,
+					   .queue_family = _gfx_queue_family_index,
+					   .queue = *_gfx_queue };
 }
 
 void renderer::Device::notify_present()

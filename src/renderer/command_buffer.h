@@ -48,6 +48,9 @@ namespace renderer
 		void draw( uint32_t count );
 		void draw_indexed( const Buffer& index_buffer );
 
+		// Get the underlying renderer buffer, for integration with 3rd party (eg: imgui)
+		VkCommandBuffer get_impl() const { return *_cmd_buffer; }
+
 	private:
 		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )
 			: _cmd_buffer( std::move( cmd_buffer ) )
