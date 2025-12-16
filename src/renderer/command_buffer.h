@@ -48,7 +48,7 @@ namespace renderer
 		void bind_index_buffer( const Buffer& index_buffer );
 
 		void draw( uint32_t count );
-		void draw_indexed( uint32_t count, uint32_t instance_count = 1, uint32_t first_index = 0 );
+		void draw_indexed( uint32_t count, uint32_t instance_count = 1, uint32_t first_index = 0, uint32_t first_instance = 0 );
 
 		// Get the underlying renderer buffer, for integration with 3rd party (eg: imgui)
 		VkCommandBuffer get_impl() const { return *_cmd_buffer; }

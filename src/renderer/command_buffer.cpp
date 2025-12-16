@@ -165,9 +165,9 @@ void renderer::CommandBuffer::draw( uint32_t count )
 	_cmd_buffer.draw( count, 1, 0, 0 );
 }
 
-void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_count, uint32_t first_index )
+void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_count, uint32_t first_index, uint32_t first_instance )
 {
-	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, 0 );
+	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, first_instance );
 }
 
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )
