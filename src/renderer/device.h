@@ -8,6 +8,7 @@
 #include <renderer/pipeline.h>
 #include <renderer/sampler.h>
 #include <renderer/texture.h>
+#include <span>
 
 namespace renderer
 {
@@ -55,6 +56,10 @@ namespace renderer
 		void wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout );
 
 		void submit( CommandBuffer& buffer, Fence signal_fence );
+
+		raii::QueryPool create_query_pool( uint32_t size );
+		void get_query_pool_results( QueryPool pool, uint32_t first_index, std::span<uint64_t> results );
+		float get_timestamp_period() const;
 
 		const Extent2D& get_extent() const { return _extent; }
 

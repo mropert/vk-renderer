@@ -170,6 +170,16 @@ void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_co
 	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, first_instance );
 }
 
+void renderer::CommandBuffer::reset_query_pool( QueryPool pool, uint32_t first, uint32_t count )
+{
+	_cmd_buffer.resetQueryPool( pool, first, count );
+}
+
+void renderer::CommandBuffer::write_timestamp( QueryPool pool, uint32_t index )
+{
+	_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllGraphics, pool, index );
+}
+
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )
 {
 	assert( pipeline._desc.push_constants_size == size );

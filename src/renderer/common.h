@@ -83,8 +83,9 @@ namespace renderer
 	inline constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 	using Extent2D = ::vk::Extent2D;
 
-	// VkFence isn't worth the code to wrap it, it's a just handle for us
+	// Vulkan types that are worth the code to wrap them, it's just handles for us
 	using Fence = ::vk::Fence;
+	using QueryPool = ::vk::QueryPool;
 
 	class Error : public std::runtime_error
 	{
@@ -119,5 +120,6 @@ namespace renderer
 	namespace raii
 	{
 		using Fence = ::vk::raii::Fence;
+		using QueryPool = ::vk::raii::QueryPool;
 	}
 }

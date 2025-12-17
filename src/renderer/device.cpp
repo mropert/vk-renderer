@@ -322,6 +322,30 @@ void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
 }
 
+renderer::raii::QueryPool renderer::Device::create_query_pool( uint32_t size )
+{
+	return _device.createQueryPool( vk::QueryPoolCreateInfo { .queryType = vk::QueryType::eTimestamp, .queryCount = size } );
+}
+
+void renderer::Device::get_query_pool_results( QueryPool pool, uint32_t first_index, std::span<uint64_t> results )
+{
+	// Can't seem to find the C++ wrapper, let's use the C API
+	vkGetQueryPoolResults( *_device,
+						   pool,
+						   first_index,
+						   static_cast<uint32_t>( results.size() ),
+						   results.size_bytes(),
+						   results.data(),
+						   sizeof( uint64_t ),
+						   VK_QUERY_RESULT_64_BIT );
+}
+
+float renderer::Device::get_timestamp_period() const
+{
+	// XXX: we don't cache device props
+	return _physical_device.getProperties().limits.timestampPeriod;
+}
+
 void renderer::Device::set_relative_mouse_mode( bool enabled )
 {
 	SDL_SetWindowRelativeMouseMode( _window.get(), enabled );
