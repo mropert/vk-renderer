@@ -3,26 +3,35 @@
 #include <VkBootstrap.h>
 #include <ranges>
 #include <renderer/command_buffer.h>
-#include <renderer/device.h>
 #include <renderer/details/profiler.h>
+#include <renderer/device.h>
 #include <renderer/texture.h>
 
-renderer::Swapchain::Swapchain( Device& device, Texture::Format format )
+renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsync )
 	: _device( &device )
 {
 	OPTICK_EVENT();
-	auto swapchain_ret = vkb::SwapchainBuilder( *device._physical_device,
-												*device._device,
-												*device._surface,
-												device._gfx_queue_family_index,
-												device._present_queue_family_index )
-							 .set_desired_format( VkSurfaceFormatKHR { .format = static_cast<VkFormat>( format ),
-																	   .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } )
-							 .set_desired_present_mode( VK_PRESENT_MODE_FIFO_KHR )
-							 .set_desired_extent( device._extent.width, device._extent.height )
-							 .add_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_DST_BIT )
-							 .build();
 
+	vkb::SwapchainBuilder builder( *device._physical_device,
+								   *device._device,
+								   *device._surface,
+								   device._gfx_queue_family_index,
+								   device._present_queue_family_index );
+	builder.set_desired_format(
+		VkSurfaceFormatKHR { .format = static_cast<VkFormat>( format ), .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } );
+	if ( vsync )
+	{
+		builder.set_desired_present_mode( VK_PRESENT_MODE_FIFO_KHR );
+	}
+	else
+	{
+		builder.set_desired_present_mode( VK_PRESENT_MODE_MAILBOX_KHR );
+		builder.add_fallback_present_mode( VK_PRESENT_MODE_IMMEDIATE_KHR );
+	}
+	builder.set_desired_extent( device._extent.width, device._extent.height );
+	builder.add_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_DST_BIT );
+
+	auto swapchain_ret = builder.build();
 	if ( !swapchain_ret )
 	{
 		throw Error( swapchain_ret.error(), swapchain_ret.vk_result() );

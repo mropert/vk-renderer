@@ -3,7 +3,6 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
-#include <print>
 #include <renderer/bindless.h>
 #include <renderer/command_buffer.h>
 #include <renderer/details/profiler.h>
@@ -80,8 +79,7 @@ renderer::Device::Device( const char* appname )
 
 	_physical_device = { _instance, physical_device_ret.value() };
 
-	const auto props = _physical_device.getProperties2();
-	std::println( "Using hardware device: {}", props.properties.deviceName.data() );
+	set_properties();
 
 	const auto device_ret = vkb::DeviceBuilder( physical_device_ret.value() ).build();
 	if ( !device_ret )
@@ -372,4 +370,30 @@ void renderer::Device::notify_present()
 	OPTICK_EVENT();
 	_delete_index = ( _delete_index + 1 ) % MAX_FRAMES_IN_FLIGHT;
 	_delete_queue[ _delete_index ].clear();
+}
+
+void renderer::Device::set_properties()
+{
+	const auto props = _physical_device.getProperties();
+	_properties.name = props.deviceName.data();
+
+	static constexpr auto bar_flags = vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible;
+	static constexpr auto gpu_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+	const auto mem_props = _physical_device.getMemoryProperties();
+	// We assume there's (at most) one heap per type (CPU/GPU/BAR)
+	for ( const auto type : std::span( mem_props.memoryTypes.data(), mem_props.memoryTypeCount ) )
+	{
+		if ( ( type.propertyFlags & bar_flags ) == bar_flags )
+		{
+			_properties.transfer_memory_size = mem_props.memoryHeaps[ type.heapIndex ].size;
+		}
+		else if ( ( type.propertyFlags & bar_flags ) == gpu_flags )
+		{
+			_properties.device_memory_size = mem_props.memoryHeaps[ type.heapIndex ].size;
+		}
+		else
+		{
+			_properties.host_memory_size = mem_props.memoryHeaps[ type.heapIndex ].size;
+		}
+	}
 }

@@ -81,8 +81,19 @@ namespace renderer
 		};
 		Internals get_internals() const;
 
+		struct Properties
+		{
+			std::string name;
+			std::size_t host_memory_size;
+			std::size_t device_memory_size;
+			std::size_t transfer_memory_size;
+		};
+
+		const Properties& get_properties() const { return _properties; }
+
 	private:
 		void notify_present();
+		void set_properties();
 
 		sdl::raii::Window _window;
 		Extent2D _extent;
@@ -91,6 +102,7 @@ namespace renderer
 		vk::raii::DebugUtilsMessengerEXT _debug_util = nullptr;
 		vk::raii::SurfaceKHR _surface = nullptr;
 		vk::raii::PhysicalDevice _physical_device = nullptr;
+		Properties _properties;
 		vk::raii::Device _device = nullptr;
 		uint32_t _gfx_queue_family_index = 0;
 		uint32_t _present_queue_family_index = 0;

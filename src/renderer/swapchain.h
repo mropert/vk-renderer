@@ -12,7 +12,7 @@ namespace renderer
 	class Swapchain
 	{
 	public:
-		explicit Swapchain( Device& device, Texture::Format format );
+		explicit Swapchain( Device& device, Texture::Format format, bool vsync = true );
 
 		uint32_t get_frame_count() const { return _frame_count; }
 		uint32_t get_image_count() const { return _images.size(); }
