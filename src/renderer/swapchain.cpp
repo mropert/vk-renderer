@@ -12,6 +12,30 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsy
 {
 	OPTICK_EVENT();
 
+	_swapchain = create( device, format, vsync, nullptr );
+
+	fill_images( format );
+
+	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
+	{
+		_frames_data[ i ].render_fence = device.create_fence( true );
+		_frames_data[ i ].render_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
+		_frames_data[ i ].swapchain_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
+	}
+}
+
+void renderer::Swapchain::recreate( Texture::Format format, bool vsync )
+{
+	auto new_swapchain = create( *_device, format, vsync, *_swapchain );
+	_device->wait_idle();
+	_image_views.clear();
+	_images.clear();
+	_swapchain = std::move( new_swapchain );
+	fill_images( format );
+}
+
+vk::raii::SwapchainKHR renderer::Swapchain::create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain )
+{
 	vkb::SwapchainBuilder builder( *device._physical_device,
 								   *device._device,
 								   *device._surface,
@@ -30,28 +54,25 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsy
 	}
 	builder.set_desired_extent( device._extent.width, device._extent.height );
 	builder.add_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_DST_BIT );
+	builder.set_old_swapchain( old_swapchain );
 
 	auto swapchain_ret = builder.build();
 	if ( !swapchain_ret )
 	{
 		throw Error( swapchain_ret.error(), swapchain_ret.vk_result() );
 	}
-	_swapchain = { device._device, swapchain_ret.value() };
+	return { device._device, swapchain_ret.value() };
+}
 
+void renderer::Swapchain::fill_images( Texture::Format format )
+{
 	const auto& images = _swapchain.getImages();
 	_images.reserve( images.size() );
 	_image_views.reserve( _images.size() );
 	for ( const auto image : images )
 	{
-		_images.push_back( Texture { image, format, Texture::Usage::COLOR_ATTACHMENT, device._extent } );
+		_images.push_back( Texture { image, format, Texture::Usage::COLOR_ATTACHMENT, _device->_extent } );
 		_image_views.push_back( _device->create_texture_view( _images.back(), TextureView::Aspect::COLOR ) );
-	}
-
-	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
-	{
-		_frames_data[ i ].render_fence = device.create_fence( true );
-		_frames_data[ i ].render_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
-		_frames_data[ i ].swapchain_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
 	}
 }
 

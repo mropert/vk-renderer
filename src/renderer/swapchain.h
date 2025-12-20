@@ -21,7 +21,12 @@ namespace renderer
 		void submit( CommandBuffer& buffer );
 		void present();
 
+		void recreate( Texture::Format format, bool vsync = true );
+
 	private:
+		static vk::raii::SwapchainKHR create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain );
+		void fill_images( Texture::Format format );
+
 		struct FrameData
 		{
 			raii::Fence render_fence = nullptr;
