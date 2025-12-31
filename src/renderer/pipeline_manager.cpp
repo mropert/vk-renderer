@@ -54,6 +54,9 @@ renderer::PipelineHandle renderer::PipelineManager::add( const Pipeline::Desc& d
 void renderer::PipelineManager::update()
 {
 	OPTICK_EVENT();
+	// FIXME: to avoid blocking on a rendering thread we should probably do a try_lock() here
+	// and bail if it fails to acquire it (and try again next frame).
+	// But so far this hasn't been an issue.
 	std::scoped_lock lock( _mtx );
 	for ( auto& [ handle, item ] : _updated_items )
 	{
@@ -110,6 +113,10 @@ void renderer::PipelineManager::rebuild_job()
 	std::vector<RebuildRequest> to_rebuild;
 	{
 		std::scoped_lock lock( _mtx );
+		// FIXME: if shaders share sources we will check their last write time twice (or more)
+		// We should instead have a map of a filename -> set<PipelineHandle>.
+		// Also, instead of polling the filesystem every 1s we should use a filewatcher,
+		// but std::filesystem doesn't provide one and this isn't worth writing our own at the moment.
 		for ( PipelineHandle i = 0; i < _items.size(); ++i )
 		{
 			// Check if we somehow don't already have rebuilt the pipeline but update() hasn't been called yet
