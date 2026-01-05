@@ -228,16 +228,10 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
-renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc& desc,
-															const raii::ShaderCode& vertex_code,
-															const raii::ShaderCode& fragment_code,
-															const BindlessManager& bindless_manager )
+renderer::raii::Pipeline
+renderer::Device::create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManager& bindless_manager )
 {
 	OPTICK_EVENT();
-	const auto vertex_shader = _device.createShaderModule(
-		{ .codeSize = vertex_code.get_size() * sizeof( uint32_t ), .pCode = vertex_code.get_data() } );
-	const auto fragment_shader = _device.createShaderModule(
-		{ .codeSize = fragment_code.get_size() * sizeof( uint32_t ), .pCode = fragment_code.get_data() } );
 
 	const vk::PushConstantRange constants { .stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = desc.push_constants_size };
 	const auto desc_layout = bindless_manager.get_layout();
@@ -276,14 +270,19 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 	const std::array<vk::DynamicState, 2> state { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
 	const vk::PipelineDynamicStateCreateInfo dynamic_state { .dynamicStateCount = state.size(), .pDynamicStates = state.data() };
 
-	const std::array<vk::PipelineShaderStageCreateInfo, 2> shaders {
-		{ { .stage = vk::ShaderStageFlagBits::eVertex, .module = vertex_shader, .pName = "main" },
-		  { .stage = vk::ShaderStageFlagBits::eFragment, .module = fragment_shader, .pName = "main" } }
-	};
+	std::vector<vk::raii::ShaderModule> modules;
+	std::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
+
+	for ( const auto& shader : shaders )
+	{
+		modules.push_back( _device.createShaderModule( { .codeSize = shader._blob.size_bytes(), .pCode = shader._blob.data() } ) );
+		shader_stages.push_back(
+			{ .stage = static_cast<vk::ShaderStageFlagBits>( shader._stage ), .module = modules.back(), .pName = "main" } );
+	}
 
 	const vk::GraphicsPipelineCreateInfo pipeline_info = { .pNext = &render_info,
-														   .stageCount = shaders.size(),
-														   .pStages = shaders.data(),
+														   .stageCount = static_cast<uint32_t>( shader_stages.size() ),
+														   .pStages = shader_stages.data(),
 														   .pVertexInputState = &vertex_input,
 														   .pInputAssemblyState = &ia,
 														   .pViewportState = &viewport,

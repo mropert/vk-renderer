@@ -7,6 +7,7 @@
 #include <renderer/common.h>
 #include <renderer/pipeline.h>
 #include <renderer/sampler.h>
+#include <renderer/shader.h>
 #include <renderer/texture.h>
 #include <span>
 
@@ -26,7 +27,6 @@ namespace renderer
 		using CommandBuffer = std::unique_ptr<renderer::CommandBuffer, CommandBufferDeleter>;
 
 		class Pipeline;
-		class ShaderCode;
 	}
 
 	class Device
@@ -47,10 +47,8 @@ namespace renderer
 
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
 
-		raii::Pipeline create_pipeline( const Pipeline::Desc& desc,
-										const raii::ShaderCode& vertex_code,
-										const raii::ShaderCode& fragment_code,
-										const BindlessManager& bindless_manager );
+		raii::Pipeline
+		create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManager& bindless_manager );
 
 		raii::Fence create_fence( bool signaled = false );
 		void wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout );

@@ -55,6 +55,21 @@ namespace
 
 		const std::filesystem::path& base_dir;
 	};
+
+	shaderc_shader_kind get_shader_kind(renderer::ShaderStage stage)
+	{
+		switch (stage)
+		{
+			case renderer::ShaderStage::FRAGMENT:
+				return shaderc_shader_kind::shaderc_fragment_shader;
+			case renderer::ShaderStage::MESH:
+				return shaderc_shader_kind::shaderc_mesh_shader;
+			case renderer::ShaderStage::VERTEX:
+				return shaderc_shader_kind::shaderc_vertex_shader;
+			default:
+				throw renderer::Error( "invalid shader type" );
+		}
+	}
 }
 
 struct renderer::ShaderCompiler::Impl
@@ -106,8 +121,7 @@ renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, s
 
 	const auto result = _impl->compiler.CompileGlslToSpv( source.data(),
 														  source.size(),
-														  stage == ShaderStage::VERTEX ? shaderc_glsl_vertex_shader
-																					   : shaderc_glsl_fragment_shader,
+														  get_shader_kind( stage ),
 														  filename.c_str(),
 														  options );
 

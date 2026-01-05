@@ -1,10 +1,22 @@
 #pragma once
 
-// TODO: include module STL instead
+// XXX: vulkan_hpp module imports the std module which generates weird behaviour when other libraries #include the STL
+// As a workaround we make sur they are included first
+#include <SDL3/SDL.h>
+#include <array>
+#include <expected>
+#include <filesystem>
+#include <initializer_list>
 #include <memory>
+#include <optional>
+#include <queue>
+#include <span>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
+#include <vma/vk_mem_alloc.h>
 
 #if defined( __INTELLISENSE__ )
 #include <vulkan/vulkan.hpp>
@@ -12,9 +24,6 @@
 #else
 import vulkan_hpp;
 #endif
-
-#include <SDL3/SDL.h>
-#include <vma/vk_mem_alloc.h>
 
 namespace sdl::raii
 {

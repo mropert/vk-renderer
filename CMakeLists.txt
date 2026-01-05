@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.31)
+
 project(vk-renderer CXX)
 
 # Toolchain stuff: C++23 and fix some of CMake's nonsense for MSVC
