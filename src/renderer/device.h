@@ -85,6 +85,7 @@ namespace renderer
 			std::size_t host_memory_size;
 			std::size_t device_memory_size;
 			std::size_t transfer_memory_size;
+			bool mesh_shader_support = false;
 		};
 
 		const Properties& get_properties() const { return _properties; }

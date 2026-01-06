@@ -62,6 +62,7 @@ renderer::Device::Device( const char* appname )
 														.dynamicRendering = true };
 
 	const VkPhysicalDeviceVulkan12Features features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+														.storageBuffer8BitAccess = true,
 														.descriptorIndexing = true,
 														.bufferDeviceAddress = true };
 
@@ -70,6 +71,7 @@ renderer::Device::Device( const char* appname )
 										 .set_required_features_13( features13 )
 										 .set_required_features_12( features12 )
 										 .set_surface( *_surface )
+										 .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
 										 .select();
 
 	if ( !physical_device_ret )
@@ -80,8 +82,16 @@ renderer::Device::Device( const char* appname )
 	_physical_device = { _instance, physical_device_ret.value() };
 
 	set_properties();
+	_properties.mesh_shader_support = physical_device_ret->is_extension_present( VK_EXT_MESH_SHADER_EXTENSION_NAME );
 
-	const auto device_ret = vkb::DeviceBuilder( physical_device_ret.value() ).build();
+	vkb::DeviceBuilder device_builder( physical_device_ret.value() );
+	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_feature { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
+																.meshShader = VK_TRUE };
+	if ( _properties.mesh_shader_support )
+	{
+		device_builder.add_pNext( &mesh_shader_feature );
+	}
+	const auto device_ret = device_builder.build();
 	if ( !device_ret )
 	{
 		throw Error( device_ret.error(), device_ret.vk_result() );
@@ -228,12 +238,19 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
-renderer::raii::Pipeline
-renderer::Device::create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManager& bindless_manager )
+renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc& desc,
+															std::span<const ShaderCode> shaders,
+															const BindlessManager& bindless_manager )
 {
 	OPTICK_EVENT();
 
-	const vk::PushConstantRange constants { .stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = desc.push_constants_size };
+	vk::ShaderStageFlags used_stages {};
+	for (const auto& shader : shaders)
+	{
+		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader._stage );
+	}
+
+	const vk::PushConstantRange constants { .stageFlags = used_stages, .size = desc.push_constants_size };
 	const auto desc_layout = bindless_manager.get_layout();
 	vk::PipelineLayoutCreateInfo layout_create_info { .setLayoutCount = 1, .pSetLayouts = &desc_layout };
 	if ( constants.size > 0 )
@@ -295,7 +312,7 @@ renderer::Device::create_pipeline( const Pipeline::Desc& desc, std::span<const S
 
 	auto pipeline = _device.createGraphicsPipeline( nullptr, pipeline_info );
 
-	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc );
+	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc, used_stages );
 }
 
 renderer::raii::Fence renderer::Device::create_fence( bool signaled )

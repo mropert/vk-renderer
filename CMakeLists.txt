@@ -42,6 +42,7 @@ target_sources(renderer
 		src/renderer/pipeline_manager.cpp
 		src/renderer/sampler.cpp
 		src/renderer/shader.cpp
+		src/renderer/shader_compiler.cpp
 		src/renderer/swapchain.cpp
 		src/renderer/texture.cpp
 		src/renderer/vma_impl.cpp

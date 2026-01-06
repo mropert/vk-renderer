@@ -45,10 +45,11 @@ namespace renderer
 		const Desc& get_desc() const { return _desc; };
 
 	protected:
-		Pipeline( vk::PipelineLayout layout, vk::Pipeline pipeline, const Pipeline::Desc& desc )
+		Pipeline( vk::PipelineLayout layout, vk::Pipeline pipeline, const Pipeline::Desc& desc, vk::ShaderStageFlags used_stages )
 			: _layout( layout )
 			, _pipeline( pipeline )
 			, _desc( desc )
+			, _used_stages( used_stages )
 		{
 		}
 
@@ -56,6 +57,7 @@ namespace renderer
 		vk::PipelineLayout _layout;
 		vk::Pipeline _pipeline;
 		Desc _desc;
+		vk::ShaderStageFlags _used_stages;
 
 		friend class CommandBuffer;
 	};
@@ -68,8 +70,11 @@ namespace renderer
 			Pipeline() = default;
 
 		private:
-			Pipeline( vk::raii::PipelineLayout&& layout, vk::raii::Pipeline&& pipeline, const Pipeline::Desc& desc )
-				: renderer::Pipeline( *layout, *pipeline, desc )
+			Pipeline( vk::raii::PipelineLayout&& layout,
+					  vk::raii::Pipeline&& pipeline,
+					  const Pipeline::Desc& desc,
+					  vk::ShaderStageFlags used_stages )
+				: renderer::Pipeline( *layout, *pipeline, desc, used_stages )
 				, _layout( std::move( layout ) )
 				, _pipeline( std::move( pipeline ) )
 

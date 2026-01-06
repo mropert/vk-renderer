@@ -49,6 +49,7 @@ namespace renderer
 
 		void draw( uint32_t count );
 		void draw_indexed( uint32_t count, uint32_t instance_count = 1, uint32_t first_index = 0, uint32_t first_instance = 0 );
+		void draw_mesh_task( uint32_t count );
 
 		void reset_query_pool( QueryPool pool, uint32_t first, uint32_t count );
 		void write_timestamp( QueryPool pool, uint32_t index );

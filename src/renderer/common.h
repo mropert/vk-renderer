@@ -5,7 +5,6 @@
 #include <SDL3/SDL.h>
 #include <array>
 #include <expected>
-#include <filesystem>
 #include <initializer_list>
 #include <memory>
 #include <optional>

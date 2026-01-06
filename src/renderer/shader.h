@@ -1,10 +1,7 @@
 #pragma once
 
-#include <expected>
-#include <filesystem>
 #include <renderer/common.h>
 #include <span>
-#include <string_view>
 
 namespace renderer
 {
@@ -20,34 +17,18 @@ namespace renderer
 		return ShaderStage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
 	}
 
-	namespace raii
-	{
-		class ShaderCode;
-	}
-
-	class ShaderCompiler
-	{
-	public:
-		explicit ShaderCompiler( std::filesystem::path base_dir );
-		~ShaderCompiler();
-
-		const std::filesystem::path& get_base_directory() const;
-
-		// Read file and compile
-		std::expected<raii::ShaderCode, std::string> compile( ShaderStage stage, std::string_view filename ) const;
-		// Compile from memory source
-		std::expected<raii::ShaderCode, std::string> compile( ShaderStage stage, std::string_view source, std::string filename ) const;
-
-	private:
-		struct Impl;
-		std::unique_ptr<Impl> _impl;
-	};
-
 	struct ShaderSource
 	{
 		std::string path;
 		ShaderStage stage;
 	};
+
+	class ShaderCompiler;
+
+	namespace raii
+	{
+		class ShaderCode;
+	}
 
 	class ShaderCode
 	{
@@ -89,7 +70,7 @@ namespace renderer
 			{
 			}
 
-			friend class ShaderCompiler;
+			friend ShaderCompiler;
 
 			std::vector<uint32_t> _bytes;
 			std::string _filename;

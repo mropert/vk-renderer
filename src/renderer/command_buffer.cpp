@@ -170,6 +170,11 @@ void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_co
 	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, first_instance );
 }
 
+void renderer::CommandBuffer::draw_mesh_task( uint32_t count )
+{
+	_cmd_buffer.drawMeshTasksEXT( count, 1, 1 );
+}
+
 void renderer::CommandBuffer::reset_query_pool( QueryPool pool, uint32_t first, uint32_t count )
 {
 	_cmd_buffer.resetQueryPool( pool, first, count );
@@ -183,6 +188,10 @@ void renderer::CommandBuffer::write_timestamp( QueryPool pool, uint32_t index )
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )
 {
 	assert( pipeline._desc.push_constants_size == size );
-	_cmd_buffer.getDispatcher()
-		->vkCmdPushConstants( *_cmd_buffer, pipeline._layout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, static_cast<uint32_t>( size ), data );
+	_cmd_buffer.getDispatcher()->vkCmdPushConstants( *_cmd_buffer,
+													 pipeline._layout,
+													 static_cast<VkShaderStageFlags>( pipeline._used_stages ),
+													 0,
+													 static_cast<uint32_t>( size ),
+													 data );
 }
