@@ -245,7 +245,7 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 	OPTICK_EVENT();
 
 	vk::ShaderStageFlags used_stages {};
-	for (const auto& shader : shaders)
+	for ( const auto& shader : shaders )
 	{
 		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader._stage );
 	}
@@ -390,8 +390,12 @@ void renderer::Device::notify_present()
 
 void renderer::Device::set_properties()
 {
-	const auto props = _physical_device.getProperties();
-	_properties.name = props.deviceName.data();
+	const auto props_chain = _physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceMeshShaderPropertiesEXT>();
+	_properties.name = props_chain.get<vk::PhysicalDeviceProperties2>().properties.deviceName.data();
+
+	const auto& mesh_shader_props = props_chain.get<vk::PhysicalDeviceMeshShaderPropertiesEXT>();
+	_properties.max_mesh_shader_groups = mesh_shader_props.maxMeshWorkGroupTotalCount;
+	_properties.max_mesh_shader_group_size = mesh_shader_props.maxMeshWorkGroupCount;
 
 	static constexpr auto bar_flags = vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible;
 	static constexpr auto gpu_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;

@@ -170,9 +170,9 @@ void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_co
 	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, first_instance );
 }
 
-void renderer::CommandBuffer::draw_mesh_task( uint32_t count )
+void renderer::CommandBuffer::draw_mesh_task( uint32_t x, uint32_t y, uint32_t z )
 {
-	_cmd_buffer.drawMeshTasksEXT( count, 1, 1 );
+	_cmd_buffer.drawMeshTasksEXT( x, y, z );
 }
 
 void renderer::CommandBuffer::reset_query_pool( QueryPool pool, uint32_t first, uint32_t count )

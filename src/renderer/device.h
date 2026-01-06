@@ -86,6 +86,8 @@ namespace renderer
 			std::size_t device_memory_size;
 			std::size_t transfer_memory_size;
 			bool mesh_shader_support = false;
+			uint32_t max_mesh_shader_groups = 0;
+			std::array<uint32_t, 3> max_mesh_shader_group_size;
 		};
 
 		const Properties& get_properties() const { return _properties; }
