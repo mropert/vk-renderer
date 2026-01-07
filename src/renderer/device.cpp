@@ -86,6 +86,7 @@ renderer::Device::Device( const char* appname )
 
 	vkb::DeviceBuilder device_builder( physical_device_ret.value() );
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_feature { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
+																.taskShader = VK_TRUE,
 																.meshShader = VK_TRUE };
 	if ( _properties.mesh_shader_support )
 	{

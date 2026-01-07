@@ -64,6 +64,8 @@ namespace
 				return shaderc_shader_kind::shaderc_fragment_shader;
 			case renderer::ShaderStage::MESH:
 				return shaderc_shader_kind::shaderc_mesh_shader;
+			case renderer::ShaderStage::TASK:
+				return shaderc_shader_kind::shaderc_task_shader;
 			case renderer::ShaderStage::VERTEX:
 				return shaderc_shader_kind::shaderc_vertex_shader;
 			default:
