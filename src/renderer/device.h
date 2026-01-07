@@ -51,7 +51,11 @@ namespace renderer
 		create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManager& bindless_manager );
 
 		raii::Fence create_fence( bool signaled = false );
-		void wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout );
+		void wait_for_fences( std::span<const Fence> fences, uint64_t timeout );
+		void wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout )
+		{
+			wait_for_fences( std::span( begin( fences ), fences.size() ), timeout );
+		}
 
 		void submit( CommandBuffer& buffer, Fence signal_fence );
 

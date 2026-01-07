@@ -323,7 +323,7 @@ renderer::raii::Fence renderer::Device::create_fence( bool signaled )
 		vk::FenceCreateInfo { .flags = signaled ? vk::FenceCreateFlagBits::eSignaled : vk::FenceCreateFlagBits {} } );
 }
 
-void renderer::Device::wait_for_fences( std::initializer_list<Fence> fences, uint64_t timeout )
+void renderer::Device::wait_for_fences( std::span<const Fence> fences, uint64_t timeout )
 {
 	OPTICK_EVENT();
 	// We can safely ignore the return value, VulkanHpp already throws an exception on failure
