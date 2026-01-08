@@ -19,8 +19,8 @@ namespace renderer
 		};
 
 		Buffer() = default;
-		vk::DeviceAddress get_device_address() const { return _address; }
-		void* get_mapped_address() const { return _mapped_address; }
+		vk::DeviceAddress get_device_address() const;
+		void* get_mapped_address() const;
 		std::size_t get_size() const { return _size; }
 		Usage get_usage() const { return _usage; }
 
