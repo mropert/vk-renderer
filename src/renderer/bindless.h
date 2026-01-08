@@ -22,6 +22,8 @@ namespace renderer
 		vk::DescriptorSetLayout get_layout() const { return _layout; }
 		vk::DescriptorSet get_set() const { return _set; }
 
+		std::size_t get_texture_memory_usage() const { return _texture_memory; }
+
 	private:
 		Device* _device;
 		vk::raii::DescriptorSetLayout _layout = nullptr;
@@ -29,6 +31,7 @@ namespace renderer
 		vk::raii::DescriptorSet _set = nullptr;
 		std::vector<renderer::raii::Texture> _textures;
 		std::vector<renderer::raii::TextureView> _texture_views;
+		std::size_t _texture_memory = 0;
 		renderer::raii::Sampler _linear_sampler;
 	};
 }

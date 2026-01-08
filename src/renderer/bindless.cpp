@@ -47,6 +47,7 @@ renderer::TextureHandle renderer::BindlessManager::add_texture( raii::Texture&& 
 {
 	const auto index = static_cast<TextureHandle>( _textures.size() );
 	_textures.push_back( std::move( tex ) );
+	_texture_memory += _textures.back().get_size();
 	_texture_views.push_back( _device->create_texture_view( _textures[ index ], TextureView::Aspect::COLOR ) );
 
 	const vk::DescriptorImageInfo info { .imageView = static_cast<TextureView>( _texture_views[ index ] )._view,

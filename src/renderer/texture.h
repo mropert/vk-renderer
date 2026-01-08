@@ -52,6 +52,10 @@ namespace renderer
 		Extent2D get_extent() const { return _extent; }
 		int get_samples() const { return _samples; }
 
+		std::size_t get_size() const { return _extent.width * _extent.height * get_bpp( _format ); }
+
+		static std::size_t get_bpp( Format format );
+
 	protected:
 		vk::Image get_image() const { return _image; }
 
