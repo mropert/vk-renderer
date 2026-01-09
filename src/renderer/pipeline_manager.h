@@ -13,7 +13,7 @@
 
 namespace renderer
 {
-	class BindlessManager;
+	class BindlessManagerBase;
 	class Device;
 
 	using PipelineHandle = uint32_t;
@@ -34,7 +34,7 @@ namespace renderer
 		};
 
 	public:
-		PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManager& bindless_manager );
+		PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManagerBase& bindless_manager );
 
 		// Creates and return new pipeline. Safe to call from multiple threads at once.
 		PipelineHandle add( const Pipeline::Desc& desc, std::initializer_list<ShaderSource> shaders );
@@ -50,7 +50,7 @@ namespace renderer
 		void rebuild_job();
 
 		Device* _device;
-		const BindlessManager* _bindless_manager;
+		const BindlessManagerBase* _bindless_manager;
 		ShaderCompiler _compiler;
 		std::vector<Item> _items;
 		// Recursive mtx has higher perf on windows, blame MSVC runtime

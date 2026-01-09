@@ -4,6 +4,8 @@
 
 namespace renderer
 {
+	using BufferHandle = vk::DeviceAddress;
+
 	class Buffer
 	{
 	public:
@@ -47,6 +49,7 @@ namespace renderer
 		std::size_t _size = 0;
 		Usage _usage = Usage::NONE;
 
+		friend class BindlessManagerBase;
 		friend class CommandBuffer;
 		friend class Device;
 	};

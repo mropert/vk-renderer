@@ -18,7 +18,7 @@ namespace
 	}
 }
 
-renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManager& bindless_manager )
+renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManagerBase& bindless_manager )
 	: _device( &device )
 	, _bindless_manager( &bindless_manager )
 	, _compiler( std::move( shader_dir ) )

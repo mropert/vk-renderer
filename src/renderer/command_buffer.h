@@ -6,7 +6,7 @@
 
 namespace renderer
 {
-	class BindlessManager;
+	class BindlessManagerBase;
 	class Buffer;
 	class Pipeline;
 	class TextureView;
@@ -34,7 +34,7 @@ namespace renderer
 		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target );
 		void end_rendering();
 
-		void bind_pipeline( const Pipeline& pipeline, const BindlessManager& bindless_manager );
+		void bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager );
 
 		void set_scissor( Extent2D extent );
 		void set_viewport( Extent2D extent );

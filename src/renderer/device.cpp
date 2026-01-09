@@ -241,7 +241,7 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 
 renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc& desc,
 															std::span<const ShaderCode> shaders,
-															const BindlessManager& bindless_manager )
+															const BindlessManagerBase& bindless_manager )
 {
 	OPTICK_EVENT();
 

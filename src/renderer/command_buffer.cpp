@@ -130,7 +130,7 @@ void renderer::CommandBuffer::end_rendering()
 	_cmd_buffer.endRendering();
 }
 
-void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const BindlessManager& bindless_manager )
+void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager )
 {
 	_cmd_buffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline._pipeline );
 	_cmd_buffer.bindDescriptorSets( vk::PipelineBindPoint::eGraphics, pipeline._layout, 0, bindless_manager.get_set(), {} );

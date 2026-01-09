@@ -13,7 +13,7 @@
 
 namespace renderer
 {
-	class BindlessManager;
+	class BindlessManagerBase;
 	class CommandBuffer;
 	class Device;
 
@@ -48,7 +48,7 @@ namespace renderer
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
 
 		raii::Pipeline
-		create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManager& bindless_manager );
+		create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManagerBase& bindless_manager );
 
 		raii::Fence create_fence( bool signaled = false );
 		void wait_for_fences( std::span<const Fence> fences, uint64_t timeout );
@@ -119,7 +119,7 @@ namespace renderer
 		std::array<std::vector<raii::Pipeline>, MAX_FRAMES_IN_FLIGHT> _delete_queue;
 		uint32_t _delete_index = 0;
 
-		friend class BindlessManager;
+		friend class BindlessManagerBase;
 		friend class Swapchain;
 	};
 
