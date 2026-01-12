@@ -96,9 +96,16 @@ void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment
 {
 	vk::RenderingAttachmentInfo color_attachment { .imageView = color_target.target._view,
 												   .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-												   .loadOp = vk::AttachmentLoadOp::eClear,
-												   .storeOp = vk::AttachmentStoreOp::eStore,
-												   .clearValue = { .color = color_target.clear_value } };
+												   .storeOp = vk::AttachmentStoreOp::eStore };
+	if ( color_target.clear_value )
+	{
+		color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+		color_attachment.clearValue = { .color = *color_target.clear_value };
+	}
+	else
+	{
+		color_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
+	}
 
 	if ( color_target.resolve_target._view )
 	{

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <renderer/common.h>
 #include <renderer/texture.h>
 
@@ -15,7 +16,7 @@ namespace renderer
 	{
 		TextureView target;
 		TextureView resolve_target;
-		std::array<float, 4> clear_value;
+		std::optional<std::array<float, 4>> clear_value;
 	};
 
 	class CommandBuffer
@@ -31,7 +32,7 @@ namespace renderer
 		void copy_buffer( const Buffer& src, std::size_t offset, std::size_t size, const Buffer& dest, std::size_t dest_offset = 0 );
 		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex );
 
-		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target );
+		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target = {} );
 		void end_rendering();
 
 		void bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager );
