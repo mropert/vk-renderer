@@ -52,6 +52,8 @@ namespace renderer
 		void draw_indexed( uint32_t count, uint32_t instance_count = 1, uint32_t first_index = 0, uint32_t first_instance = 0 );
 		void draw_mesh_task( uint32_t x, uint32_t y, uint32_t z );
 
+		void dispatch( uint32_t x, uint32_t y, uint32_t z );
+
 		void reset_query_pool( QueryPool pool, uint32_t first, uint32_t count );
 		void write_timestamp( QueryPool pool, uint32_t index );
 
@@ -63,6 +65,13 @@ namespace renderer
 			: _cmd_buffer( std::move( cmd_buffer ) )
 		{
 		}
+
+		void texture_barrier( Texture& tex,
+							  Texture::Layout target,
+							  vk::PipelineStageFlags2 src_stage,
+							  vk::PipelineStageFlags2 dst_stage,
+							  vk::AccessFlags2 src_access,
+							  vk::AccessFlags2 dst_access );
 
 		void push_constants( const Pipeline& pipeline, const void* data, std::size_t size );
 

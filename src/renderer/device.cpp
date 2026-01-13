@@ -239,9 +239,24 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
-renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc& desc,
-															std::span<const ShaderCode> shaders,
-															const BindlessManagerBase& bindless_manager )
+vk::raii::PipelineLayout renderer::Device::create_pipeline_layout( vk::ShaderStageFlags used_stages,
+																   uint32_t push_constants_size,
+																   const BindlessManagerBase& bindless_manager )
+{
+	const vk::PushConstantRange constants { .stageFlags = used_stages, .size = push_constants_size };
+	const auto desc_layouts = bindless_manager.get_layouts();
+	vk::PipelineLayoutCreateInfo layout_create_info { .setLayoutCount = desc_layouts.size(), .pSetLayouts = desc_layouts.data() };
+	if ( constants.size > 0 )
+	{
+		layout_create_info.pushConstantRangeCount = 1;
+		layout_create_info.pPushConstantRanges = &constants;
+	}
+	return _device.createPipelineLayout( layout_create_info );
+}
+
+renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipeline::Desc& desc,
+																	 std::span<const ShaderCode> shaders,
+																	 const BindlessManagerBase& bindless_manager )
 {
 	OPTICK_EVENT();
 
@@ -251,15 +266,7 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader._stage );
 	}
 
-	const vk::PushConstantRange constants { .stageFlags = used_stages, .size = desc.push_constants_size };
-	const auto desc_layout = bindless_manager.get_layout();
-	vk::PipelineLayoutCreateInfo layout_create_info { .setLayoutCount = 1, .pSetLayouts = &desc_layout };
-	if ( constants.size > 0 )
-	{
-		layout_create_info.pushConstantRangeCount = 1;
-		layout_create_info.pPushConstantRanges = &constants;
-	}
-	auto layout = _device.createPipelineLayout( layout_create_info );
+	auto layout = create_pipeline_layout( used_stages, desc.push_constants_size, bindless_manager );
 
 	const vk::PipelineVertexInputStateCreateInfo vertex_input;
 	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = static_cast<vk::PrimitiveTopology>( desc.topology ) };
@@ -313,7 +320,25 @@ renderer::raii::Pipeline renderer::Device::create_pipeline( const Pipeline::Desc
 
 	auto pipeline = _device.createGraphicsPipeline( nullptr, pipeline_info );
 
-	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc, used_stages );
+	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc, used_stages, Pipeline::Type::Graphics );
+}
+
+renderer::raii::Pipeline
+renderer::Device::create_compute_pipeline( const Pipeline::Desc& desc, ShaderCode shader, const BindlessManagerBase& bindless_manager )
+{
+	const vk::ShaderStageFlags used_stages = vk::ShaderStageFlagBits::eCompute;
+	auto layout = create_pipeline_layout( used_stages, desc.push_constants_size, bindless_manager );
+
+	const auto shader_module = _device.createShaderModule( { .codeSize = shader._blob.size_bytes(), .pCode = shader._blob.data() } );
+
+	const vk::ComputePipelineCreateInfo info {
+		.stage { .stage = vk::ShaderStageFlagBits::eCompute, .module = shader_module, .pName = "main" },
+		.layout = layout
+	};
+
+	auto pipeline = _device.createComputePipeline( nullptr, info );
+
+	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc, used_stages, Pipeline::Type::Compute );
 }
 
 renderer::raii::Fence renderer::Device::create_fence( bool signaled )

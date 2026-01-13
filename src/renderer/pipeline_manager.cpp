@@ -94,7 +94,14 @@ renderer::raii::Pipeline renderer::PipelineManager::make( const Pipeline::Desc& 
 	std::vector<renderer::ShaderCode> shader_descs;
 	std::copy( begin( shaders ), end( shaders ), std::back_inserter( shader_descs ) );
 
-	return _device->create_pipeline( desc, shader_descs, *_bindless_manager );
+	if ( sources.size() == 1 && sources[ 0 ].stage == ShaderStage::COMPUTE )
+	{
+		return _device->create_compute_pipeline( desc, shader_descs[ 0 ], *_bindless_manager );
+	}
+	else
+	{
+		return _device->create_graphics_pipeline( desc, shader_descs, *_bindless_manager );
+	}
 }
 
 namespace

@@ -29,16 +29,19 @@ void renderer::CommandBuffer::reset()
 	_cmd_buffer.reset();
 }
 
-void renderer::CommandBuffer::transition_texture( Texture& tex, Texture::Layout target )
+void renderer::CommandBuffer::texture_barrier( Texture& tex,
+											   Texture::Layout target,
+											   vk::PipelineStageFlags2 src_stage,
+											   vk::PipelineStageFlags2 dst_stage,
+											   vk::AccessFlags2 src_access,
+											   vk::AccessFlags2 dst_access )
 {
-	const vk::ImageAspectFlags aspectMask = ( target == Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL
-											  || target == Texture::Layout::DEPTH_READ_ONLY_OPTIMAL )
-		? vk::ImageAspectFlagBits::eDepth
-		: vk::ImageAspectFlagBits::eColor;
-	const vk::ImageMemoryBarrier2 imageBarrier { .srcStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-												 .srcAccessMask = vk::AccessFlagBits2::eMemoryWrite,
-												 .dstStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-												 .dstAccessMask = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
+	const vk::ImageAspectFlags aspectMask = ( tex._format == Texture::Format::D32_SFLOAT ) ? vk::ImageAspectFlagBits::eDepth
+																						   : vk::ImageAspectFlagBits::eColor;
+	const vk::ImageMemoryBarrier2 imageBarrier { .srcStageMask = src_stage,
+												 .srcAccessMask = src_access,
+												 .dstStageMask = dst_stage,
+												 .dstAccessMask = dst_access,
 												 .oldLayout = static_cast<vk::ImageLayout>( tex._layout ),
 												 .newLayout = static_cast<vk::ImageLayout>( target ),
 												 .image = tex._image,
@@ -50,6 +53,17 @@ void renderer::CommandBuffer::transition_texture( Texture& tex, Texture::Layout 
 
 	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &imageBarrier } );
 	tex._layout = target;
+}
+
+void renderer::CommandBuffer::transition_texture( Texture& tex, Texture::Layout target )
+{
+	// XXX: _extremely_ conservative barrier
+	texture_barrier( tex,
+					 target,
+					 vk::PipelineStageFlagBits2::eAllCommands,
+					 vk::PipelineStageFlagBits2::eAllCommands,
+					 vk::AccessFlagBits2::eMemoryWrite,
+					 vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead );
 }
 
 void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst )
@@ -121,6 +135,12 @@ void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment
 							 .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 							 .loadOp = vk::AttachmentLoadOp::eClear,
 							 .storeOp = vk::AttachmentStoreOp::eStore };
+		if ( depth_target.resolve_target._view )
+		{
+			depth_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
+			depth_attachment.resolveImageView = depth_target.resolve_target._view;
+			depth_attachment.resolveImageLayout = vk::ImageLayout::eDepthAttachmentOptimal;
+		}
 	}
 
 	const vk::RenderingInfo renderInfo { .renderArea = vk::Rect2D { .extent = extent },
@@ -139,8 +159,14 @@ void renderer::CommandBuffer::end_rendering()
 
 void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager )
 {
-	_cmd_buffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline._pipeline );
-	_cmd_buffer.bindDescriptorSets( vk::PipelineBindPoint::eGraphics, pipeline._layout, 0, bindless_manager.get_set(), {} );
+	const auto bind_point = pipeline.get_type() == Pipeline::Type::Compute ? vk::PipelineBindPoint::eCompute
+																		   : vk::PipelineBindPoint::eGraphics;
+	_cmd_buffer.bindPipeline( bind_point, pipeline._pipeline );
+	const auto sets = bindless_manager.get_sets();
+	for ( int i = 0; i < sets.size(); ++i )
+	{
+		_cmd_buffer.bindDescriptorSets( bind_point, pipeline._layout, i, sets[ i ], {} );
+	}
 }
 
 void renderer::CommandBuffer::set_scissor( Extent2D extent )
@@ -180,6 +206,11 @@ void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_co
 void renderer::CommandBuffer::draw_mesh_task( uint32_t x, uint32_t y, uint32_t z )
 {
 	_cmd_buffer.drawMeshTasksEXT( x, y, z );
+}
+
+void renderer::CommandBuffer::dispatch( uint32_t x, uint32_t y, uint32_t z )
+{
+	_cmd_buffer.dispatch( x, y, z );
 }
 
 void renderer::CommandBuffer::reset_query_pool( QueryPool pool, uint32_t first, uint32_t count )

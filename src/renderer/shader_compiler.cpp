@@ -60,6 +60,8 @@ namespace
 	{
 		switch ( stage )
 		{
+			case renderer::ShaderStage::COMPUTE:
+				return shaderc_shader_kind::shaderc_compute_shader;
 			case renderer::ShaderStage::FRAGMENT:
 				return shaderc_shader_kind::shaderc_fragment_shader;
 			case renderer::ShaderStage::MESH:

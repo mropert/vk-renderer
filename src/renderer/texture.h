@@ -19,6 +19,7 @@ namespace renderer
 			R8G8B8A8_UNORM = vk::Format::eR8G8B8A8Unorm,
 			R8G8B8A8_SRGB = vk::Format::eR8G8B8A8Srgb,
 			R16G16B16A16_SFLOAT = vk::Format::eR16G16B16A16Sfloat,
+			R32_SFLOAT = vk::Format::eR32Sfloat,
 			D32_SFLOAT = vk::Format::eD32Sfloat
 		};
 
@@ -41,8 +42,9 @@ namespace renderer
 			TRANSFER_SRC = vk::ImageUsageFlagBits::eTransferSrc,
 			TRANSFER_DST = vk::ImageUsageFlagBits::eTransferDst,
 			SAMPLED = vk::ImageUsageFlagBits::eSampled,
+			STORAGE = vk::ImageUsageFlagBits::eStorage,
 			COLOR_ATTACHMENT = vk::ImageUsageFlagBits::eColorAttachment,
-			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment
 		};
 
 		Texture() = default;
@@ -84,6 +86,11 @@ namespace renderer
 	inline constexpr Texture::Usage operator|( Texture::Usage lhs, Texture::Usage rhs )
 	{
 		return Texture::Usage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
+	}
+
+	inline constexpr Texture::Usage operator&( Texture::Usage lhs, Texture::Usage rhs )
+	{
+		return Texture::Usage( std::to_underlying( lhs ) & std::to_underlying( rhs ) );
 	}
 
 	class TextureView

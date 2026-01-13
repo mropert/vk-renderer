@@ -47,8 +47,12 @@ namespace renderer
 
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
 
+		raii::Pipeline create_graphics_pipeline( const Pipeline::Desc& desc,
+												 std::span<const ShaderCode> shaders,
+												 const BindlessManagerBase& bindless_manager );
+
 		raii::Pipeline
-		create_pipeline( const Pipeline::Desc& desc, std::span<const ShaderCode> shaders, const BindlessManagerBase& bindless_manager );
+		create_compute_pipeline( const Pipeline::Desc& desc, ShaderCode shader, const BindlessManagerBase& bindless_manager );
 
 		raii::Fence create_fence( bool signaled = false );
 		void wait_for_fences( std::span<const Fence> fences, uint64_t timeout );
@@ -97,6 +101,10 @@ namespace renderer
 		const Properties& get_properties() const { return _properties; }
 
 	private:
+		vk::raii::PipelineLayout create_pipeline_layout( vk::ShaderStageFlags used_stages,
+														 uint32_t push_constants_size,
+														 const BindlessManagerBase& bindless_manager );
+
 		void notify_present();
 		void set_properties();
 

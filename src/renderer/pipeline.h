@@ -3,6 +3,7 @@
 #include <array>
 #include <renderer/common.h>
 #include <renderer/texture.h>
+#include <variant>
 
 namespace renderer
 {
@@ -30,26 +31,40 @@ namespace renderer
 			CLOCKWISE = vk::FrontFace::eClockwise
 		};
 
+		enum class Type
+		{
+			Compute,
+			Graphics
+		};
+
 		struct Desc
 		{
+			// Graphics pipelines only
 			Texture::Format color_format;
 			Texture::Format depth_format;
 			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
 			CullMode cull_mode = CullMode::FRONT;
 			FrontFace front_face = FrontFace::CLOCKWISE;
+			// Compute & graphics pipelines
 			uint32_t push_constants_size = 0;
 		};
 
 		Pipeline() = default;
 
 		const Desc& get_desc() const { return _desc; };
+		Type get_type() const { return _type; }
 
 	protected:
-		Pipeline( vk::PipelineLayout layout, vk::Pipeline pipeline, const Pipeline::Desc& desc, vk::ShaderStageFlags used_stages )
+		Pipeline( vk::PipelineLayout layout,
+				  vk::Pipeline pipeline,
+				  const Pipeline::Desc& desc,
+				  vk::ShaderStageFlags used_stages,
+				  Type type )
 			: _layout( layout )
 			, _pipeline( pipeline )
 			, _desc( desc )
 			, _used_stages( used_stages )
+			, _type( type )
 		{
 		}
 
@@ -58,6 +73,7 @@ namespace renderer
 		vk::Pipeline _pipeline;
 		Desc _desc;
 		vk::ShaderStageFlags _used_stages;
+		Type _type;
 
 		friend class CommandBuffer;
 	};
@@ -73,11 +89,11 @@ namespace renderer
 			Pipeline( vk::raii::PipelineLayout&& layout,
 					  vk::raii::Pipeline&& pipeline,
 					  const Pipeline::Desc& desc,
-					  vk::ShaderStageFlags used_stages )
-				: renderer::Pipeline( *layout, *pipeline, desc, used_stages )
+					  vk::ShaderStageFlags used_stages,
+					  Type type )
+				: renderer::Pipeline( *layout, *pipeline, desc, used_stages, type )
 				, _layout( std::move( layout ) )
 				, _pipeline( std::move( pipeline ) )
-
 			{
 			}
 

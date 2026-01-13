@@ -9,6 +9,7 @@ namespace renderer
 	{
 		VERTEX = vk::ShaderStageFlagBits::eVertex,
 		FRAGMENT = vk::ShaderStageFlagBits::eFragment,
+		COMPUTE = vk::ShaderStageFlagBits::eCompute,
 		TASK = vk::ShaderStageFlagBits::eTaskEXT,
 		MESH = vk::ShaderStageFlagBits::eMeshEXT
 	};

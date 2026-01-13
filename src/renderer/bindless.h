@@ -8,7 +8,14 @@
 
 namespace renderer
 {
-	using TextureHandle = uint32_t;
+	struct BindlessTexture
+	{
+		Texture texture;
+		TextureView view;
+		uint32_t texture_index;
+		uint32_t storage_index;
+	};
+
 	template <typename T>
 	struct BindlessHandle
 	{
@@ -33,12 +40,41 @@ namespace renderer
 		};
 
 	public:
+		enum class Sets : uint32_t
+		{
+			TEXTURES = 0,
+			BUFFERS = 1,
+			COUNT
+		};
+		static constexpr uint32_t SETS_COUNT = std::to_underlying( Sets::COUNT );
+
+		enum class TextureBindings : uint32_t
+		{
+			TEXTURES = 0,
+			IMAGES = 1,
+			LINEAR_SAMPLER = 2,
+			COUNT
+		};
+
 		static constexpr uint32_t MAX_TEXTURES = 8192;
 
-		vk::DescriptorSetLayout get_layout() const { return _layout; }
-		vk::DescriptorSet get_set() const { return _set; }
+		std::array<vk::DescriptorSetLayout, SETS_COUNT> get_layouts() const
+		{
+			std::array<vk::DescriptorSetLayout, SETS_COUNT> layouts;
+			std::copy( begin( _layouts ), end( _layouts ), begin( layouts ) );
+			return layouts;
+		}
+		std::array<vk::DescriptorSet, SETS_COUNT> get_sets() const
+		{
+			{
+				std::array<vk::DescriptorSet, SETS_COUNT> sets;
+				std::copy( begin( _sets ), end( _sets ), begin( sets ) );
+				return sets;
+			}
+		}
 
-		TextureHandle add_texture( raii::Texture&& tex );
+		BindlessTexture add_texture_read_only( raii::Texture&& tex );
+		BindlessTexture add_texture_read_write( raii::Texture&& tex );
 		std::size_t get_texture_memory_usage() const { return _texture_memory; }
 
 	protected:
@@ -47,12 +83,16 @@ namespace renderer
 		uint32_t add_buffer_entry( uint32_t buffer_index, const void* data, uint32_t size );
 
 	private:
+		void add_texture_bindings( uint32_t view_index, uint32_t read_only_index, uint32_t read_write_index = -1 );
+
 		Device* _device;
-		vk::raii::DescriptorSetLayout _layout = nullptr;
+		std::array<vk::raii::DescriptorSetLayout, std::to_underlying( Sets::COUNT )> _layouts = { { nullptr, nullptr } };
 		vk::raii::DescriptorPool _pool = nullptr;
-		vk::raii::DescriptorSet _set = nullptr;
+		std::array<vk::raii::DescriptorSet, std::to_underlying( Sets::COUNT )> _sets = { { nullptr, nullptr } };
 		std::vector<raii::Texture> _textures;
 		std::vector<raii::TextureView> _texture_views;
+		uint32_t _read_only_textures = 0;
+		uint32_t _read_write_textures = 0;
 		std::size_t _texture_memory = 0;
 		renderer::raii::Sampler _linear_sampler;
 		std::vector<BindlessBuffer> _buffers;
@@ -60,12 +100,14 @@ namespace renderer
 
 	// Bindless manager for pipelines
 	// Shader layout:
-	// - set 0, binding 0: texture array
-	// - set 0, binding 1: linear sampler
-	// - set 0, binding 2: storage buffer for type #1
-	// - set 0, binding 3: storage buffer for type #2
+	// - set 0, binding 0: texture (sampled image) array
+	// - set 0, binding 1: storage image array
+	// - set 0, binding 2: linear sampler
+	// - set 0, bindings 3-N: reserved for future samplers
+	// - set 1, binding 0: storage buffer for type #1
+	// - set 1, binding 1: storage buffer for type #2
 	// ...
-	// - set 0, binding N-1: storage buffer for type #N
+	// - set 1, binding N-1: storage buffer for type #N
 	template <typename... BufferTypes>
 	class BindlessManager : public BindlessManagerBase
 	{
