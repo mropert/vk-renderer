@@ -29,57 +29,65 @@ void renderer::CommandBuffer::reset()
 	_cmd_buffer.reset();
 }
 
-void renderer::CommandBuffer::texture_barrier( Texture& tex,
-											   Texture::Layout target,
+void renderer::CommandBuffer::texture_barrier( const Texture& tex,
+											   Texture::Layout src_layout,
+											   Texture::Layout dst_layout,
 											   vk::PipelineStageFlags2 src_stage,
 											   vk::PipelineStageFlags2 dst_stage,
 											   vk::AccessFlags2 src_access,
-											   vk::AccessFlags2 dst_access )
+											   vk::AccessFlags2 dst_access,
+											   int mip_level )
 {
-	const vk::ImageAspectFlags aspectMask = ( tex._format == Texture::Format::D32_SFLOAT ) ? vk::ImageAspectFlagBits::eDepth
-																						   : vk::ImageAspectFlagBits::eColor;
+	assert( mip_level == -1 || mip_level < tex.get_mips() );
+
+	const vk::ImageAspectFlags aspectMask = ( tex.get_format() == Texture::Format::D32_SFLOAT ) ? vk::ImageAspectFlagBits::eDepth
+																								: vk::ImageAspectFlagBits::eColor;
 	const vk::ImageMemoryBarrier2 imageBarrier { .srcStageMask = src_stage,
 												 .srcAccessMask = src_access,
 												 .dstStageMask = dst_stage,
 												 .dstAccessMask = dst_access,
-												 .oldLayout = static_cast<vk::ImageLayout>( tex._layout ),
-												 .newLayout = static_cast<vk::ImageLayout>( target ),
+												 .oldLayout = static_cast<vk::ImageLayout>( src_layout ),
+												 .newLayout = static_cast<vk::ImageLayout>( dst_layout ),
 												 .image = tex._image,
 												 .subresourceRange = {
 													 .aspectMask = aspectMask,
-													 .levelCount = VK_REMAINING_MIP_LEVELS,
+													 .baseMipLevel = static_cast<uint32_t>( mip_level == -1 ? 0 : mip_level ),
+													 .levelCount = mip_level == -1 ? VK_REMAINING_MIP_LEVELS : 1,
 													 .layerCount = VK_REMAINING_ARRAY_LAYERS,
 												 } };
 
 	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &imageBarrier } );
-	tex._layout = target;
 }
 
-void renderer::CommandBuffer::transition_texture( Texture& tex, Texture::Layout target )
+void renderer::CommandBuffer::transition_texture( const Texture& tex,
+												  Texture::Layout src_layout,
+												  Texture::Layout dst_layout,
+												  int mip_level )
 {
 	// XXX: _extremely_ conservative barrier
 	texture_barrier( tex,
-					 target,
+					 src_layout,
+					 dst_layout,
 					 vk::PipelineStageFlagBits2::eAllCommands,
 					 vk::PipelineStageFlagBits2::eAllCommands,
 					 vk::AccessFlagBits2::eMemoryWrite,
-					 vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead );
+					 vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
+					 mip_level );
 }
 
 void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst )
 {
-	assert( src._layout == Texture::Layout::TRANSFER_SRC_OPTIMAL );
-	assert( dst._layout == Texture::Layout::TRANSFER_DST_OPTIMAL );
-
-	const vk::ImageBlit2 blit_region { .srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-									   .srcOffsets = { { vk::Offset3D {}, vk::Offset3D( src._extent.width, src._extent.height, 1 ) } },
-									   .dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-									   .dstOffsets = { { vk::Offset3D {}, vk::Offset3D( dst._extent.width, dst._extent.height, 1 ) } } };
+	const vk::ImageBlit2 blit_region {
+		.srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
+		.srcOffsets = { { vk::Offset3D {}, vk::Offset3D( src._desc.extent.width, src._desc.extent.height, 1 ) } },
+		.dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
+		.dstOffsets = { { vk::Offset3D {}, vk::Offset3D( dst._desc.extent.width, dst._desc.extent.height, 1 ) } }
+	};
 
 	const vk::BlitImageInfo2 blit_info { .srcImage = src._image,
-										 .srcImageLayout = static_cast<vk::ImageLayout>( src._layout ),
+										 .srcImageLayout = vk::ImageLayout::eTransferSrcOptimal,
 										 .dstImage = dst._image,
-										 .dstImageLayout = static_cast<vk::ImageLayout>( dst._layout ),
+										 .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
 										 .regionCount = 1,
 										 .pRegions = &blit_region };
 
@@ -100,10 +108,11 @@ void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std:
 	_cmd_buffer.copyBufferToImage(
 		buffer._buffer,
 		tex._image,
-		static_cast<vk::ImageLayout>( tex._layout ),
-		vk::BufferImageCopy { .bufferOffset = offset,
-							  .imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-							  .imageExtent = vk::Extent3D { .width = tex._extent.width, .height = tex._extent.height, .depth = 1 } } );
+		vk::ImageLayout::eTransferDstOptimal,
+		vk::BufferImageCopy {
+			.bufferOffset = offset,
+			.imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
+			.imageExtent = vk::Extent3D { .width = tex._desc.extent.width, .height = tex._desc.extent.height, .depth = 1 } } );
 }
 
 void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target )

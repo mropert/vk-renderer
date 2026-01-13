@@ -26,7 +26,7 @@ namespace renderer
 		void end();
 		void reset();
 
-		void transition_texture( Texture& tex, Texture::Layout target );
+		void transition_texture( const Texture& tex, Texture::Layout src_layout, Texture::Layout dst_layout, int mip_level = -1 );
 		void blit_texture( const Texture& src, const Texture& dst );
 
 		void copy_buffer( const Buffer& src, std::size_t offset, std::size_t size, const Buffer& dest, std::size_t dest_offset = 0 );
@@ -66,12 +66,14 @@ namespace renderer
 		{
 		}
 
-		void texture_barrier( Texture& tex,
-							  Texture::Layout target,
+		void texture_barrier( const Texture& tex,
+							  Texture::Layout src_layout,
+							  Texture::Layout dst_layout,
 							  vk::PipelineStageFlags2 src_stage,
 							  vk::PipelineStageFlags2 dst_stage,
 							  vk::AccessFlags2 src_access,
-							  vk::AccessFlags2 dst_access );
+							  vk::AccessFlags2 dst_access,
+							  int mip_level = -1 );
 
 		void push_constants( const Pipeline& pipeline, const void* data, std::size_t size );
 

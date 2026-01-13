@@ -71,7 +71,7 @@ void renderer::Swapchain::fill_images( Texture::Format format )
 	_image_views.reserve( _images.size() );
 	for ( const auto image : images )
 	{
-		_images.push_back( Texture { image, format, Texture::Usage::COLOR_ATTACHMENT, _device->_extent } );
+		_images.push_back( Texture { image, Texture::Desc { format, Texture::Usage::COLOR_ATTACHMENT, _device->_extent } } );
 		_image_views.push_back( _device->create_texture_view( _images.back(), TextureView::Aspect::COLOR ) );
 	}
 }

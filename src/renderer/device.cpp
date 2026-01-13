@@ -64,6 +64,7 @@ renderer::Device::Device( const char* appname )
 	const VkPhysicalDeviceVulkan12Features features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
 														.storageBuffer8BitAccess = true,
 														.descriptorIndexing = true,
+														.samplerFilterMinmax = true,
 														.bufferDeviceAddress = true };
 
 	const auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
@@ -157,18 +158,18 @@ void renderer::Device::release_command_buffer( CommandBuffer* buffer )
 	_available_command_buffers.push( buffer );
 }
 
-renderer::raii::Texture renderer::Device::create_texture( Texture::Format format, Texture::Usage usage, Extent2D extent, int samples )
+renderer::raii::Texture renderer::Device::create_texture( const Texture::Desc& desc )
 {
 	OPTICK_EVENT();
 	const VkImageCreateInfo info { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 								   .imageType = VK_IMAGE_TYPE_2D,
-								   .format = static_cast<VkFormat>( format ),
-								   .extent = { .width = extent.width, .height = extent.height, .depth = 1 },
-								   .mipLevels = 1,
+								   .format = static_cast<VkFormat>( desc.format ),
+								   .extent = { .width = desc.extent.width, .height = desc.extent.height, .depth = 1 },
+								   .mipLevels = static_cast<uint32_t>( desc.mips ),
 								   .arrayLayers = 1,
-								   .samples = static_cast<VkSampleCountFlagBits>( samples ),
+								   .samples = static_cast<VkSampleCountFlagBits>( desc.samples ),
 								   .tiling = VK_IMAGE_TILING_OPTIMAL,
-								   .usage = static_cast<VkImageUsageFlags>( usage ) };
+								   .usage = static_cast<VkImageUsageFlags>( desc.usage ) };
 
 	const VmaAllocationCreateInfo create_info { .usage = VMA_MEMORY_USAGE_AUTO };
 
@@ -181,31 +182,33 @@ renderer::raii::Texture renderer::Device::create_texture( Texture::Format format
 		throw Error( "Failed to create image", ret );
 	}
 
-	return raii::Texture( renderer::Texture( image, format, usage, extent, samples ),
-						  vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
+	return raii::Texture( image, desc, vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
-renderer::raii::TextureView renderer::Device::create_texture_view( const Texture& texture, TextureView::Aspect aspect )
+renderer::raii::TextureView renderer::Device::create_texture_view( const Texture& texture, TextureView::Aspect aspect, int mip_level )
 {
 	const vk::ImageViewCreateInfo image_view_info { .image = texture._image,
 													.viewType = vk::ImageViewType::e2D,
-													.format = static_cast<vk::Format>( texture._format ),
-													.subresourceRange = { .aspectMask = static_cast<vk::ImageAspectFlagBits>( aspect ),
-																		  .baseMipLevel = 0,
-																		  .levelCount = 1,
-																		  .baseArrayLayer = 0,
-																		  .layerCount = 1 } };
+													.format = static_cast<vk::Format>( texture.get_format() ),
+													.subresourceRange = {
+														.aspectMask = static_cast<vk::ImageAspectFlagBits>( aspect ),
+														.baseMipLevel = static_cast<uint32_t>( mip_level == -1 ? 0 : mip_level ),
+														.levelCount = mip_level == -1 ? VK_REMAINING_MIP_LEVELS : 1,
+														.baseArrayLayer = 0,
+														.layerCount = 1 } };
 
 
 	auto view = _device.createImageView( image_view_info );
 	return raii::TextureView( std::move( view ) );
 }
 
-renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter )
+renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter, Sampler::ReductionMode mode )
 {
 	OPTICK_EVENT();
-	auto sampler = _device.createSampler(
-		vk::SamplerCreateInfo { .magFilter = static_cast<vk::Filter>( filter ), .minFilter = static_cast<vk::Filter>( filter ) } );
+	const vk::SamplerReductionModeCreateInfo reduction_info { .reductionMode = static_cast<vk::SamplerReductionMode>( mode ) };
+	auto sampler = _device.createSampler( vk::SamplerCreateInfo { .pNext = &reduction_info,
+																  .magFilter = static_cast<vk::Filter>( filter ),
+																  .minFilter = static_cast<vk::Filter>( filter ) } );
 	return raii::Sampler( std::move( sampler ) );
 }
 

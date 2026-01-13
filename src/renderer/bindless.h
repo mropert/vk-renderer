@@ -10,10 +10,16 @@ namespace renderer
 {
 	struct BindlessTexture
 	{
+		struct Handles
+		{
+			TextureView view;
+			uint32_t texture_index = static_cast<uint32_t>( -1 );
+			uint32_t storage_index = static_cast<uint32_t>( -1 );
+		};
+
 		Texture texture;
-		TextureView view;
-		uint32_t texture_index;
-		uint32_t storage_index;
+		Handles handles;
+		std::vector<Handles> mips;
 	};
 
 	template <typename T>
@@ -53,6 +59,7 @@ namespace renderer
 			TEXTURES = 0,
 			IMAGES = 1,
 			LINEAR_SAMPLER = 2,
+			LINEAR_MIN_SAMPLER = 3,
 			COUNT
 		};
 
@@ -73,8 +80,7 @@ namespace renderer
 			}
 		}
 
-		BindlessTexture add_texture_read_only( raii::Texture&& tex );
-		BindlessTexture add_texture_read_write( raii::Texture&& tex );
+		BindlessTexture add_texture( raii::Texture&& tex, bool individual_mips = false );
 		std::size_t get_texture_memory_usage() const { return _texture_memory; }
 
 	protected:
@@ -83,7 +89,7 @@ namespace renderer
 		uint32_t add_buffer_entry( uint32_t buffer_index, const void* data, uint32_t size );
 
 	private:
-		void add_texture_bindings( uint32_t view_index, uint32_t read_only_index, uint32_t read_write_index = -1 );
+		void add_texture_bindings( const Texture::Usage usage, BindlessTexture::Handles& handles );
 
 		Device* _device;
 		std::array<vk::raii::DescriptorSetLayout, std::to_underlying( Sets::COUNT )> _layouts = { { nullptr, nullptr } };
@@ -95,6 +101,7 @@ namespace renderer
 		uint32_t _read_write_textures = 0;
 		std::size_t _texture_memory = 0;
 		renderer::raii::Sampler _linear_sampler;
+		renderer::raii::Sampler _linear_min_sampler;
 		std::vector<BindlessBuffer> _buffers;
 	};
 
@@ -103,7 +110,8 @@ namespace renderer
 	// - set 0, binding 0: texture (sampled image) array
 	// - set 0, binding 1: storage image array
 	// - set 0, binding 2: linear sampler
-	// - set 0, bindings 3-N: reserved for future samplers
+	// - set 0, binding 3: linear min sampler
+	// - set 0, bindings 4-N: reserved for future samplers
 	// - set 1, binding 0: storage buffer for type #1
 	// - set 1, binding 1: storage buffer for type #2
 	// ...

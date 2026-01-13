@@ -22,6 +22,13 @@ namespace renderer
 			CUBIC = vk::Filter::eCubicEXT
 		};
 
+		enum class ReductionMode : std::underlying_type_t<vk::SamplerReductionMode>
+		{
+			AVERAGE = vk::SamplerReductionMode::eWeightedAverage,
+			MIN = vk::SamplerReductionMode::eMin,
+			MAX = vk::SamplerReductionMode::eMax,
+		};
+
 		// private:
 		vk::Sampler _sampler;
 

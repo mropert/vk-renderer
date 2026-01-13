@@ -47,36 +47,39 @@ namespace renderer
 			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment
 		};
 
+		struct Desc
+		{
+			Format format = Format::UNDEFINED;
+			Usage usage = Usage::NONE;
+			Extent2D extent;
+			int mips = 1;
+			int samples = 1;
+		};
+
 		Texture() = default;
 
-		Format get_format() const { return _format; }
-		Usage get_usage() const { return _usage; }
-		Extent2D get_extent() const { return _extent; }
-		int get_samples() const { return _samples; }
+		Format get_format() const { return _desc.format; }
+		Usage get_usage() const { return _desc.usage; }
+		Extent2D get_extent() const { return _desc.extent; }
+		int get_mips() const { return _desc.mips; }
+		int get_samples() const { return _desc.samples; }
 
-		std::size_t get_size() const { return _extent.width * _extent.height * get_bpp( _format ); }
+		std::size_t get_size() const { return _desc.extent.width * _desc.extent.height * get_bpp( _desc.format ); }
 
 		static std::size_t get_bpp( Format format );
 
 	protected:
 		vk::Image get_image() const { return _image; }
 
-	private:
-		Texture( vk::Image image, Format format, Usage usage, Extent2D extent, int samples = 1 )
+		Texture( vk::Image image, const Desc& desc )
 			: _image( image )
-			, _format( format )
-			, _usage( usage )
-			, _extent( extent )
-			, _samples( samples )
+			, _desc( desc )
 		{
 		}
 
+	private:
 		vk::Image _image;
-		Format _format = Format::UNDEFINED;
-		Usage _usage = Usage::NONE;
-		Extent2D _extent;
-		int _samples = 1;
-		Layout _layout = Layout::UNDEFINED;
+		Desc _desc;
 
 		friend class CommandBuffer;
 		friend class Device;
@@ -136,8 +139,8 @@ namespace renderer
 			}
 
 		private:
-			Texture( const renderer::Texture& Desc, const vma::raii::Allocation& allocation )
-				: renderer::Texture( Desc )
+			Texture( vk::Image image, const Desc& Desc, const vma::raii::Allocation& allocation )
+				: renderer::Texture( image, Desc )
 				, _allocation( allocation )
 			{
 			}

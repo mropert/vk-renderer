@@ -32,7 +32,8 @@ uint32_t renderer::BindlessManagerBase::BindlessBuffer::append( const void* data
 
 renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<const uint32_t> buffer_capacities )
 	: _device( &device )
-	, _linear_sampler( device.create_sampler( renderer::Sampler::Filter::LINEAR ) )
+	, _linear_sampler( device.create_sampler( Sampler::Filter::LINEAR ) )
+	, _linear_min_sampler( device.create_sampler( Sampler::Filter::LINEAR, Sampler::ReductionMode::MIN ) )
 {
 	_buffers.reserve( buffer_capacities.size() );
 	for ( const auto capacity : buffer_capacities )
@@ -54,6 +55,10 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 			.descriptorCount = MAX_TEXTURES,
 			.stageFlags = stages },
 		  { .binding = std::to_underlying( TextureBindings::LINEAR_SAMPLER ),
+			.descriptorType = vk::DescriptorType::eSampler,
+			.descriptorCount = 1,
+			.stageFlags = stages },
+		  { .binding = std::to_underlying( TextureBindings::LINEAR_MIN_SAMPLER ),
 			.descriptorType = vk::DescriptorType::eSampler,
 			.descriptorCount = 1,
 			.stageFlags = stages } }
@@ -93,19 +98,25 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 	assert( descs.size() == SETS_COUNT );
 	std::move( begin( descs ), end( descs ), begin( _sets ) );
 
-	const vk::DescriptorImageInfo sampler_info { .sampler = static_cast<renderer::Sampler>( _linear_sampler )._sampler };
+	const vk::DescriptorImageInfo linear_sampler_info { .sampler = static_cast<renderer::Sampler>( _linear_sampler )._sampler };
+	const vk::DescriptorImageInfo linear_min_sampler_info { .sampler = static_cast<renderer::Sampler>( _linear_min_sampler )._sampler };
 	std::vector<vk::DescriptorBufferInfo> buffers_info( _buffers.size() );
-	std::vector<vk::WriteDescriptorSet> writes( _buffers.size() + 1 );
+	std::vector<vk::WriteDescriptorSet> writes( _buffers.size() + 2 );
 	writes[ 0 ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
 					.dstBinding = std::to_underlying( TextureBindings::LINEAR_SAMPLER ),
 					.descriptorCount = 1,
 					.descriptorType = vk::DescriptorType::eSampler,
-					.pImageInfo = &sampler_info };
+					.pImageInfo = &linear_sampler_info };
+	writes[ 1 ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
+					.dstBinding = std::to_underlying( TextureBindings::LINEAR_MIN_SAMPLER ),
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eSampler,
+					.pImageInfo = &linear_min_sampler_info };
 	for ( uint32_t i = 0; i < _buffers.size(); ++i )
 	{
 		// Should we limit the buffer range to the actual used size? Would it be worth the cost of doing a descriptor update on each append?
 		buffers_info[ i ] = { .buffer = _buffers[ i ]._buffer._buffer, .range = _buffers[ i ]._buffer.get_size() };
-		writes[ i + 1 ] = { .dstSet = _sets[ std::to_underlying( Sets::BUFFERS ) ],
+		writes[ i + 2 ] = { .dstSet = _sets[ std::to_underlying( Sets::BUFFERS ) ],
 							.dstBinding = i,
 							.descriptorCount = 1,
 							.descriptorType = vk::DescriptorType::eStorageBuffer,
@@ -114,62 +125,73 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 	device._device.updateDescriptorSets( writes, {} );
 }
 
-renderer::BindlessTexture renderer::BindlessManagerBase::add_texture_read_only( raii::Texture&& tex )
+renderer::BindlessTexture renderer::BindlessManagerBase::add_texture( raii::Texture&& tex, bool individual_mips )
 {
-	auto view = _device->create_texture_view( tex,
-											  tex.get_format() == Texture::Format::D32_SFLOAT ? TextureView::Aspect::DEPTH
-																							  : TextureView::Aspect::COLOR );
+	assert( !individual_mips || tex.get_mips() > 1 );
 
-	const auto index = _textures.size();
-	const auto read_only_index = _read_only_textures++;
+	const auto aspect = tex.get_format() == Texture::Format::D32_SFLOAT ? TextureView::Aspect::DEPTH : TextureView::Aspect::COLOR;
+	auto view = _device->create_texture_view( tex, aspect );
+
+	std::vector<raii::TextureView> mips;
+	if ( individual_mips )
+	{
+		mips.reserve( tex.get_mips() );
+		for ( int mip = 0; mip < tex.get_mips(); ++mip )
+		{
+			mips.push_back( _device->create_texture_view( tex, aspect, mip ) );
+		}
+	}
+
+	BindlessTexture res { .texture = tex, .handles { .view = view } };
+	_texture_memory += tex.get_size();
 	_textures.push_back( std::move( tex ) );
-	_texture_memory += _textures[ index ].get_size();
 	_texture_views.push_back( std::move( view ) );
+	add_texture_bindings( _textures.back().get_usage(), res.handles );
 
-	add_texture_bindings( index, read_only_index );
+	res.mips.reserve( mips.size() );
 
-	return { _textures[ index ], _texture_views[ index ], read_only_index, static_cast<uint32_t>( -1 ) };
+	for ( auto& mip : mips )
+	{
+		auto& mip_handle = res.mips.emplace_back( static_cast<TextureView>( mip ) );
+		_texture_views.push_back( std::move( mip ) );
+		add_texture_bindings( _textures.back().get_usage(), mip_handle );
+	}
+
+	return res;
 }
 
-renderer::BindlessTexture renderer::BindlessManagerBase::add_texture_read_write( raii::Texture&& tex )
+void renderer::BindlessManagerBase::add_texture_bindings( const Texture::Usage usage, BindlessTexture::Handles& handles )
 {
-	assert( ( tex.get_usage() & Texture::Usage::STORAGE ) == Texture::Usage::STORAGE );
+	std::array<vk::DescriptorImageInfo, 2> infos;
+	std::array<vk::WriteDescriptorSet, 2> writes;
+	int count = 0;
 
-	auto view = _device->create_texture_view( tex, TextureView::Aspect::COLOR );
+	if ( ( usage & Texture::Usage::SAMPLED ) == Texture::Usage::SAMPLED )
+	{
+		handles.texture_index = _read_only_textures++;
+		infos[ count ] = { .imageView = handles.view._view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
+		writes[ count ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
+							.dstBinding = std::to_underlying( TextureBindings::TEXTURES ),
+							.dstArrayElement = handles.texture_index,
+							.descriptorCount = 1,
+							.descriptorType = vk::DescriptorType::eSampledImage,
+							.pImageInfo = &infos[ count ] };
+		++count;
+	}
+	if ( ( usage & Texture::Usage::STORAGE ) == Texture::Usage::STORAGE )
+	{
+		handles.storage_index = _read_write_textures++;
+		infos[ count ] = { .imageView = handles.view._view, .imageLayout = vk::ImageLayout::eGeneral };
+		writes[ count ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
+							.dstBinding = std::to_underlying( TextureBindings::IMAGES ),
+							.dstArrayElement = handles.storage_index,
+							.descriptorCount = 1,
+							.descriptorType = vk::DescriptorType::eStorageImage,
+							.pImageInfo = &infos[ count ] };
+		++count;
+	}
 
-	const auto index = _textures.size();
-	const auto read_only_index = _read_only_textures++;
-	const auto read_write_index = _read_write_textures++;
-	_textures.push_back( std::move( tex ) );
-	_texture_memory += _textures[ index ].get_size();
-	_texture_views.push_back( std::move( view ) );
-
-	add_texture_bindings( index, read_only_index, read_write_index );
-
-	return { _textures[ index ], _texture_views[ index ], read_only_index, read_write_index };
-}
-
-void renderer::BindlessManagerBase::add_texture_bindings( uint32_t view_index, uint32_t read_only_index, uint32_t read_write_index )
-{
-	const std::array<vk::DescriptorImageInfo, 2> info { { { .imageView = static_cast<TextureView>( _texture_views[ view_index ] )._view,
-															.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal },
-														  { .imageView = static_cast<TextureView>( _texture_views[ view_index ] )._view,
-															.imageLayout = vk::ImageLayout::eGeneral } } };
-
-	const std::array<vk::WriteDescriptorSet, 2> write_set { { { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
-																.dstBinding = std::to_underlying( TextureBindings::TEXTURES ),
-																.dstArrayElement = read_only_index,
-																.descriptorCount = 1,
-																.descriptorType = vk::DescriptorType::eSampledImage,
-																.pImageInfo = &info[ 0 ] },
-															  { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
-																.dstBinding = std::to_underlying( TextureBindings::IMAGES ),
-																.dstArrayElement = read_write_index,
-																.descriptorCount = 1,
-																.descriptorType = vk::DescriptorType::eStorageImage,
-																.pImageInfo = &info[ 1 ] } } };
-
-	_device->_device.updateDescriptorSets( std::span( write_set.data(), read_write_index != -1 ? 2 : 1 ), {} );
+	_device->_device.updateDescriptorSets( std::span( writes.data(), count ), {} );
 }
 
 uint32_t renderer::BindlessManagerBase::add_buffer_entry( uint32_t buffer_index, const void* data, uint32_t size )
