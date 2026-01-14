@@ -22,6 +22,11 @@ namespace renderer
 		std::vector<Handles> mips;
 	};
 
+	struct BindlessSampler
+	{
+		uint32_t index;
+	};
+
 	template <typename T>
 	struct BindlessHandle
 	{
@@ -58,12 +63,16 @@ namespace renderer
 		{
 			TEXTURES = 0,
 			IMAGES = 1,
-			LINEAR_SAMPLER = 2,
-			LINEAR_MIN_SAMPLER = 3,
+			SAMPLERS = 2,
 			COUNT
 		};
 
 		static constexpr uint32_t MAX_TEXTURES = 8192;
+		static constexpr uint32_t MAX_SAMPLERS = 8;
+
+		// TODO: allow for user supplied samplers to be added
+		static constexpr BindlessSampler LINEAR_SAMPLER { 0 };
+		static constexpr BindlessSampler LINEAR_MIN_SAMPLER { 1 };
 
 		std::array<vk::DescriptorSetLayout, SETS_COUNT> get_layouts() const
 		{
@@ -100,8 +109,7 @@ namespace renderer
 		uint32_t _read_only_textures = 0;
 		uint32_t _read_write_textures = 0;
 		std::size_t _texture_memory = 0;
-		renderer::raii::Sampler _linear_sampler;
-		renderer::raii::Sampler _linear_min_sampler;
+		std::vector<raii::Sampler> _samplers;
 		std::vector<BindlessBuffer> _buffers;
 	};
 
@@ -109,9 +117,8 @@ namespace renderer
 	// Shader layout:
 	// - set 0, binding 0: texture (sampled image) array
 	// - set 0, binding 1: storage image array
-	// - set 0, binding 2: linear sampler
-	// - set 0, binding 3: linear min sampler
-	// - set 0, bindings 4-N: reserved for future samplers
+	// - set 0, binding 2: sampler array
+	// - set 0, binding 3-N: reserved for now
 	// - set 1, binding 0: storage buffer for type #1
 	// - set 1, binding 1: storage buffer for type #2
 	// ...

@@ -32,9 +32,11 @@ uint32_t renderer::BindlessManagerBase::BindlessBuffer::append( const void* data
 
 renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<const uint32_t> buffer_capacities )
 	: _device( &device )
-	, _linear_sampler( device.create_sampler( Sampler::Filter::LINEAR ) )
-	, _linear_min_sampler( device.create_sampler( Sampler::Filter::LINEAR, Sampler::ReductionMode::MIN ) )
 {
+	_samplers.reserve( 2 );
+	_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR ) );
+	_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR, Sampler::ReductionMode::MIN ) );
+
 	_buffers.reserve( buffer_capacities.size() );
 	for ( const auto capacity : buffer_capacities )
 	{
@@ -54,13 +56,9 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 			.descriptorType = vk::DescriptorType::eStorageImage,
 			.descriptorCount = MAX_TEXTURES,
 			.stageFlags = stages },
-		  { .binding = std::to_underlying( TextureBindings::LINEAR_SAMPLER ),
+		  { .binding = std::to_underlying( TextureBindings::SAMPLERS ),
 			.descriptorType = vk::DescriptorType::eSampler,
-			.descriptorCount = 1,
-			.stageFlags = stages },
-		  { .binding = std::to_underlying( TextureBindings::LINEAR_MIN_SAMPLER ),
-			.descriptorType = vk::DescriptorType::eSampler,
-			.descriptorCount = 1,
+			.descriptorCount = MAX_SAMPLERS,
 			.stageFlags = stages } }
 	};
 
@@ -81,12 +79,13 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 
 	const std::array<vk::DescriptorPoolSize, 4> pools { { { .type = vk::DescriptorType::eSampledImage, .descriptorCount = MAX_TEXTURES },
 														  { .type = vk::DescriptorType::eStorageImage, .descriptorCount = MAX_TEXTURES },
-														  { .type = vk::DescriptorType::eSampler, .descriptorCount = 1 },
+														  { .type = vk::DescriptorType::eSampler, .descriptorCount = MAX_SAMPLERS },
 														  { .type = vk::DescriptorType::eStorageBuffer,
 															.descriptorCount = static_cast<uint32_t>( _buffers.size() ) } } };
 	// We don't need (or want) individual descriptor set deletion but VulkanHpp RAII is all or nothing :(
 	const vk::DescriptorPoolCreateInfo pool_info { .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-												   .maxSets = static_cast<uint32_t>( ( MAX_TEXTURES * 2 ) + 1 + _buffers.size() ),
+												   .maxSets = static_cast<uint32_t>( ( MAX_TEXTURES * 2 ) + MAX_SAMPLERS
+																					 + _buffers.size() ),
 												   .poolSizeCount = pools.size(),
 												   .pPoolSizes = pools.data() };
 	_pool = device._device.createDescriptorPool( pool_info );
@@ -98,29 +97,31 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 	assert( descs.size() == SETS_COUNT );
 	std::move( begin( descs ), end( descs ), begin( _sets ) );
 
-	const vk::DescriptorImageInfo linear_sampler_info { .sampler = static_cast<renderer::Sampler>( _linear_sampler )._sampler };
-	const vk::DescriptorImageInfo linear_min_sampler_info { .sampler = static_cast<renderer::Sampler>( _linear_min_sampler )._sampler };
+	std::vector<vk::DescriptorImageInfo> samplers_info;
+	samplers_info.reserve( _samplers.size() );
+	for ( const renderer::Sampler sampler : _samplers )
+	{
+		samplers_info.push_back( { .sampler = sampler._sampler } );
+	};
+
 	std::vector<vk::DescriptorBufferInfo> buffers_info( _buffers.size() );
-	std::vector<vk::WriteDescriptorSet> writes( _buffers.size() + 2 );
-	writes[ 0 ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
-					.dstBinding = std::to_underlying( TextureBindings::LINEAR_SAMPLER ),
-					.descriptorCount = 1,
-					.descriptorType = vk::DescriptorType::eSampler,
-					.pImageInfo = &linear_sampler_info };
-	writes[ 1 ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
-					.dstBinding = std::to_underlying( TextureBindings::LINEAR_MIN_SAMPLER ),
-					.descriptorCount = 1,
-					.descriptorType = vk::DescriptorType::eSampler,
-					.pImageInfo = &linear_min_sampler_info };
+	std::vector<vk::WriteDescriptorSet> writes;
+	writes.reserve( 1 + _buffers.size() );
+	writes.push_back( { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
+						.dstBinding = std::to_underlying( TextureBindings::SAMPLERS ),
+						.descriptorCount = static_cast<uint32_t>( samplers_info.size() ),
+						.descriptorType = vk::DescriptorType::eSampler,
+						.pImageInfo = samplers_info.data() } );
+
 	for ( uint32_t i = 0; i < _buffers.size(); ++i )
 	{
 		// Should we limit the buffer range to the actual used size? Would it be worth the cost of doing a descriptor update on each append?
 		buffers_info[ i ] = { .buffer = _buffers[ i ]._buffer._buffer, .range = _buffers[ i ]._buffer.get_size() };
-		writes[ i + 2 ] = { .dstSet = _sets[ std::to_underlying( Sets::BUFFERS ) ],
+		writes.push_back( { .dstSet = _sets[ std::to_underlying( Sets::BUFFERS ) ],
 							.dstBinding = i,
 							.descriptorCount = 1,
 							.descriptorType = vk::DescriptorType::eStorageBuffer,
-							.pBufferInfo = &buffers_info[ i ] };
+							.pBufferInfo = &buffers_info[ i ] } );
 	}
 	device._device.updateDescriptorSets( writes, {} );
 }
