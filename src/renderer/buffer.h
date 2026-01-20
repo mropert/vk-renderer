@@ -17,7 +17,8 @@ namespace renderer
 			UNIFORM_BUFFER = vk::BufferUsageFlagBits::eUniformBuffer,
 			STORAGE_BUFFER = vk::BufferUsageFlagBits::eStorageBuffer,
 			INDEX_BUFFER = vk::BufferUsageFlagBits::eIndexBuffer,
-			SHADER_DEVICE_ADDRESS = vk::BufferUsageFlagBits::eShaderDeviceAddress
+			INDIRECT_BUFFER = vk::BufferUsageFlagBits::eIndirectBuffer,
+			SHADER_DEVICE_ADDRESS = vk::BufferUsageFlagBits::eShaderDeviceAddress,
 		};
 
 		Buffer() = default;

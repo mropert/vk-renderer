@@ -115,6 +115,39 @@ void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std:
 			.imageExtent = vk::Extent3D { .width = tex._desc.extent.width, .height = tex._desc.extent.height, .depth = 1 } } );
 }
 
+void renderer::CommandBuffer::fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value )
+{
+	assert( offset + size <= buffer.get_size() );
+	_cmd_buffer.fillBuffer( buffer.get_buffer(), offset, size, value );
+}
+
+void renderer::CommandBuffer::buffer_barrier( const Buffer& buffer )
+{
+	// XXX: aggressive write -> read barrier
+	buffer_barrier( buffer,
+					vk::PipelineStageFlagBits2::eAllCommands,
+					vk::PipelineStageFlagBits2::eAllCommands,
+					vk::AccessFlagBits2::eMemoryWrite,
+					vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite );
+}
+
+void renderer::CommandBuffer::buffer_barrier( const Buffer& buffer,
+											  vk::PipelineStageFlags2 src_stage,
+											  vk::PipelineStageFlags2 dst_stage,
+											  vk::AccessFlags2 src_access,
+											  vk::AccessFlags2 dst_access )
+{
+	const vk::BufferMemoryBarrier2 bufferBarrier { .srcStageMask = src_stage,
+												   .srcAccessMask = src_access,
+												   .dstStageMask = dst_stage,
+												   .dstAccessMask = dst_access,
+												   .buffer = buffer.get_buffer(),
+												   .offset = 0,
+												   .size = buffer.get_size() };
+
+	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &bufferBarrier } );
+}
+
 void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target )
 {
 	vk::RenderingAttachmentInfo color_attachment { .imageView = color_target.target._view,
@@ -212,9 +245,33 @@ void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_co
 	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, first_instance );
 }
 
-void renderer::CommandBuffer::draw_mesh_task( uint32_t x, uint32_t y, uint32_t z )
+void renderer::CommandBuffer::draw_indexed_indirect( const Buffer& buffer,
+													 size_t offset,
+													 const Buffer& count_buffer,
+													 size_t count_offset,
+													 uint32_t max_draws,
+													 uint32_t stride )
+{
+	assert( offset < buffer.get_size() );
+	assert( count_offset < count_buffer.get_size() );
+	_cmd_buffer.drawIndexedIndirectCount( buffer.get_buffer(), offset, count_buffer.get_buffer(), count_offset, max_draws, stride );
+}
+
+void renderer::CommandBuffer::draw_mesh_tasks( uint32_t x, uint32_t y, uint32_t z )
 {
 	_cmd_buffer.drawMeshTasksEXT( x, y, z );
+}
+
+void renderer::CommandBuffer::draw_mesh_tasks_indirect( const Buffer& buffer,
+														size_t offset,
+														const Buffer& count_buffer,
+														size_t count_offset,
+														uint32_t max_draws,
+														uint32_t stride )
+{
+	assert( offset < buffer.get_size() );
+	assert( count_offset < count_buffer.get_size() );
+	_cmd_buffer.drawMeshTasksIndirectCountEXT( buffer.get_buffer(), offset, count_buffer.get_buffer(), count_offset, max_draws, stride );
 }
 
 void renderer::CommandBuffer::dispatch( uint32_t x, uint32_t y, uint32_t z )

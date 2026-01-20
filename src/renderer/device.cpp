@@ -62,15 +62,20 @@ renderer::Device::Device( const char* appname )
 														.dynamicRendering = true };
 
 	const VkPhysicalDeviceVulkan12Features features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+														.drawIndirectCount = true,
 														.storageBuffer8BitAccess = true,
 														.descriptorIndexing = true,
 														.samplerFilterMinmax = true,
 														.bufferDeviceAddress = true };
 
+	const VkPhysicalDeviceVulkan11Features features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+														.shaderDrawParameters = true };
+
 	const auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
 										 .set_minimum_version( 1, 3 )
 										 .set_required_features_13( features13 )
 										 .set_required_features_12( features12 )
+										 .set_required_features_11( features11 )
 										 .set_surface( *_surface )
 										 .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
 										 .select();
