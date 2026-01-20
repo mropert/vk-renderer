@@ -363,6 +363,11 @@ void renderer::Device::wait_for_fences( std::span<const Fence> fences, uint64_t 
 	(void)_device.waitForFences( fences, true, timeout );
 }
 
+void renderer::Device::reset_fences( std::span<const Fence> fences )
+{
+	_device.resetFences( fences );
+}
+
 void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 {
 	OPTICK_EVENT();

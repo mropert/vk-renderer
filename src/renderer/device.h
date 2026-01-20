@@ -60,6 +60,8 @@ namespace renderer
 		{
 			wait_for_fences( std::span( begin( fences ), fences.size() ), timeout );
 		}
+		void reset_fences( std::span<const Fence> fences );
+		void reset_fences( std::initializer_list<Fence> fences ) { reset_fences( std::span( begin( fences ), fences.size() ) ); }
 
 		void submit( CommandBuffer& buffer, Fence signal_fence );
 

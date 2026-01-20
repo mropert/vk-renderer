@@ -91,7 +91,7 @@ std::tuple<uint32_t, renderer::Texture, renderer::TextureView> renderer::Swapcha
 		throw Error( "Failed to acquire swapchain image", result );
 	}
 	_current_image = image_index;
-	_device->_device.resetFences( *_frames_data[ frame_index ].render_fence );
+	_device->reset_fences( { *_frames_data[ frame_index ].render_fence } );
 	return { frame_index, _images[ image_index ], _image_views[ image_index ] };
 }
 
