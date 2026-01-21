@@ -2,7 +2,7 @@
 
 #include <renderer/details/profiler.h>
 #include <renderer/device.h>
-#include <tbb/tbb.h>
+#include <renderer/third_party/tbb.h>
 
 namespace
 {
