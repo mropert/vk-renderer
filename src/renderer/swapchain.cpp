@@ -18,9 +18,12 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsy
 
 	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
 	{
-		_frames_data[ i ].render_fence = device.create_fence( true );
-		_frames_data[ i ].render_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
-		_frames_data[ i ].swapchain_semaphore = device._device.createSemaphore( vk::SemaphoreCreateInfo() );
+		_frame_fences.push_back( device.create_fence( true ) );
+		_acquire_semaphores.push_back( device._device.createSemaphore( vk::SemaphoreCreateInfo() ) );
+	}
+	for ( int i = 0; i < _images.size(); ++i )
+	{
+		_submit_semaphores.push_back( device._device.createSemaphore( vk::SemaphoreCreateInfo() ) );
 	}
 }
 
@@ -32,6 +35,10 @@ void renderer::Swapchain::recreate( Texture::Format format, bool vsync )
 	_images.clear();
 	_swapchain = std::move( new_swapchain );
 	fill_images( format );
+	for ( int i = _submit_semaphores.size(); i < _images.size(); ++i )
+	{
+		_submit_semaphores.push_back( _device->_device.createSemaphore( vk::SemaphoreCreateInfo() ) );
+	}
 }
 
 vk::raii::SwapchainKHR renderer::Swapchain::create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain )
@@ -80,18 +87,19 @@ std::tuple<uint32_t, renderer::Texture, renderer::TextureView> renderer::Swapcha
 {
 	OPTICK_EVENT();
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
-	if ( const auto result = _device->_device.waitForFences( *_frames_data[ frame_index ].render_fence, vk::True, UINT64_MAX );
+	if ( const auto result = _device->_device.waitForFences( *_frame_fences[ frame_index ], vk::True, UINT64_MAX );
 		 result != vk::Result::eSuccess )
 	{
 		throw Error( "Render fence not signaled", result );
 	}
-	const auto [ result, image_index ] = _swapchain.acquireNextImage( UINT64_MAX, _frames_data[ frame_index ].swapchain_semaphore );
+	_device->reset_fences( { *_frame_fences[ frame_index ] } );
+
+	const auto [ result, image_index ] = _swapchain.acquireNextImage( UINT64_MAX, _acquire_semaphores[ frame_index ] );
 	if ( result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR )
 	{
 		throw Error( "Failed to acquire swapchain image", result );
 	}
 	_current_image = image_index;
-	_device->reset_fences( { *_frames_data[ frame_index ].render_fence } );
 	return { frame_index, _images[ image_index ], _image_views[ image_index ] };
 }
 
@@ -99,10 +107,10 @@ void renderer::Swapchain::submit( CommandBuffer& buffer )
 {
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
 	const vk::CommandBufferSubmitInfo cmd_submit_info { .commandBuffer = buffer._cmd_buffer };
-	const vk::SemaphoreSubmitInfo wait_info { .semaphore = _frames_data[ frame_index ].swapchain_semaphore,
+	const vk::SemaphoreSubmitInfo wait_info { .semaphore = _acquire_semaphores[ frame_index ],
 											  .value = 1,
 											  .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput };
-	const vk::SemaphoreSubmitInfo signal_info { .semaphore = _frames_data[ frame_index ].render_semaphore,
+	const vk::SemaphoreSubmitInfo signal_info { .semaphore = _submit_semaphores[ _current_image ],
 												.value = 1,
 												.stageMask = vk::PipelineStageFlagBits2::eAllGraphics };
 
@@ -112,7 +120,7 @@ void renderer::Swapchain::submit( CommandBuffer& buffer )
 												   .pCommandBufferInfos = &cmd_submit_info,
 												   .signalSemaphoreInfoCount = 1,
 												   .pSignalSemaphoreInfos = &signal_info },
-								 _frames_data[ frame_index ].render_fence );
+								 _frame_fences[ frame_index ] );
 }
 
 void renderer::Swapchain::present()
@@ -122,13 +130,11 @@ void renderer::Swapchain::present()
 	::Optick::GpuFlip( static_cast<VkSwapchainKHR>( *_swapchain ) );
 #endif
 
-	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
-	const auto result = _device->_gfx_queue.presentKHR(
-		vk::PresentInfoKHR { .waitSemaphoreCount = 1,
-							 .pWaitSemaphores = &*_frames_data[ frame_index ].render_semaphore,
-							 .swapchainCount = 1,
-							 .pSwapchains = &*_swapchain,
-							 .pImageIndices = &_current_image } );
+	const auto result = _device->_gfx_queue.presentKHR( vk::PresentInfoKHR { .waitSemaphoreCount = 1,
+																			 .pWaitSemaphores = &*_submit_semaphores[ _current_image ],
+																			 .swapchainCount = 1,
+																			 .pSwapchains = &*_swapchain,
+																			 .pImageIndices = &_current_image } );
 	_device->notify_present();
 	++_frame_count;
 	if ( result != vk::Result::eSuccess )

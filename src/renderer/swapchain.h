@@ -27,18 +27,13 @@ namespace renderer
 		static vk::raii::SwapchainKHR create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain );
 		void fill_images( Texture::Format format );
 
-		struct FrameData
-		{
-			raii::Fence render_fence = nullptr;
-			vk::raii::Semaphore render_semaphore = nullptr;
-			vk::raii::Semaphore swapchain_semaphore = nullptr;
-		};
-
 		Device* _device;
 		vk::raii::SwapchainKHR _swapchain = nullptr;
 		std::vector<Texture> _images;
 		std::vector<raii::TextureView> _image_views;
-		std::array<FrameData, MAX_FRAMES_IN_FLIGHT> _frames_data;
+		std::vector<raii::Fence> _frame_fences;
+		std::vector<vk::raii::Semaphore> _acquire_semaphores;
+		std::vector<vk::raii::Semaphore> _submit_semaphores;
 		uint32_t _frame_count = 0;
 		uint32_t _current_image = -1;
 	};
