@@ -71,11 +71,14 @@ renderer::Device::Device( const char* appname )
 	const VkPhysicalDeviceVulkan11Features features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
 														.shaderDrawParameters = true };
 
+	const VkPhysicalDeviceFeatures features10 { .pipelineStatisticsQuery = true };
+
 	const auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
 										 .set_minimum_version( 1, 3 )
 										 .set_required_features_13( features13 )
 										 .set_required_features_12( features12 )
 										 .set_required_features_11( features11 )
+										 .set_required_features( features10 )
 										 .set_surface( *_surface )
 										 .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
 										 .select();
@@ -375,16 +378,16 @@ void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
 }
 
-renderer::raii::QueryPool renderer::Device::create_query_pool( uint32_t size )
+renderer::raii::TimestampQuery renderer::Device::create_timestamp_query( uint32_t size )
 {
 	return _device.createQueryPool( vk::QueryPoolCreateInfo { .queryType = vk::QueryType::eTimestamp, .queryCount = size } );
 }
 
-void renderer::Device::get_query_pool_results( QueryPool pool, uint32_t first_index, std::span<uint64_t> results )
+void renderer::Device::get_query_results( TimestampQuery query, uint32_t first_index, std::span<uint64_t> results )
 {
 	// Can't seem to find the C++ wrapper, let's use the C API
 	vkGetQueryPoolResults( *_device,
-						   pool,
+						   query,
 						   first_index,
 						   static_cast<uint32_t>( results.size() ),
 						   results.size_bytes(),
@@ -397,6 +400,28 @@ float renderer::Device::get_timestamp_period() const
 {
 	// XXX: we don't cache device props
 	return _physical_device.getProperties().limits.timestampPeriod;
+}
+
+renderer::raii::StatisticsQuery renderer::Device::create_statistics_query()
+{
+	return _device.createQueryPool(
+		vk::QueryPoolCreateInfo { .queryType = vk::QueryType::ePipelineStatistics,
+								  .queryCount = 1,
+								  .pipelineStatistics = vk::QueryPipelineStatisticFlagBits::eClippingInvocations } );
+}
+
+renderer::Statistics renderer::Device::get_query_results( StatisticsQuery query )
+{
+	Statistics stats;
+	vkGetQueryPoolResults( *_device,
+						   query,
+						   0,
+						   1,
+						   sizeof( uint64_t ),
+						   &stats.clipping_invocations,
+						   sizeof( uint64_t ),
+						   VK_QUERY_RESULT_64_BIT );
+	return stats;
 }
 
 void renderer::Device::set_relative_mouse_mode( bool enabled )

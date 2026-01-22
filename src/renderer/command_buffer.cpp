@@ -279,14 +279,29 @@ void renderer::CommandBuffer::dispatch( uint32_t x, uint32_t y, uint32_t z )
 	_cmd_buffer.dispatch( x, y, z );
 }
 
-void renderer::CommandBuffer::reset_query_pool( QueryPool pool, uint32_t first, uint32_t count )
+void renderer::CommandBuffer::reset_query( TimestampQuery query, uint32_t first, uint32_t count )
 {
-	_cmd_buffer.resetQueryPool( pool, first, count );
+	_cmd_buffer.resetQueryPool( query, first, count );
 }
 
-void renderer::CommandBuffer::write_timestamp( QueryPool pool, uint32_t index )
+void renderer::CommandBuffer::write_timestamp( TimestampQuery query, uint32_t index )
 {
-	_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllGraphics, pool, index );
+	_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllGraphics, query, index );
+}
+
+void renderer::CommandBuffer::reset_query( StatisticsQuery query )
+{
+	_cmd_buffer.resetQueryPool( query, 0, 1 );
+}
+
+void renderer::CommandBuffer::begin_query( StatisticsQuery query )
+{
+	_cmd_buffer.beginQuery( query, 0 );
+}
+
+void renderer::CommandBuffer::end_query( StatisticsQuery query )
+{
+	_cmd_buffer.endQuery( query, 0 );
 }
 
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )

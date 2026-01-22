@@ -17,6 +17,11 @@ namespace renderer
 	class CommandBuffer;
 	class Device;
 
+	struct Statistics
+	{
+		uint64_t clipping_invocations = 0;
+	};
+
 	namespace raii
 	{
 		struct CommandBufferDeleter
@@ -65,9 +70,12 @@ namespace renderer
 
 		void submit( CommandBuffer& buffer, Fence signal_fence );
 
-		raii::QueryPool create_query_pool( uint32_t size );
-		void get_query_pool_results( QueryPool pool, uint32_t first_index, std::span<uint64_t> results );
+		raii::TimestampQuery create_timestamp_query( uint32_t size );
+		void get_query_results( TimestampQuery query, uint32_t first_index, std::span<uint64_t> results );
 		float get_timestamp_period() const;
+
+		raii::StatisticsQuery create_statistics_query();
+		Statistics get_query_results( StatisticsQuery query );
 
 		const Extent2D& get_extent() const { return _extent; }
 

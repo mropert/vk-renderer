@@ -93,7 +93,8 @@ namespace renderer
 
 	// Vulkan types that are worth the code to wrap them, it's just handles for us
 	using Fence = ::vk::Fence;
-	using QueryPool = ::vk::QueryPool;
+	using StatisticsQuery = ::vk::QueryPool;
+	using TimestampQuery = ::vk::QueryPool;
 
 	class Error : public std::runtime_error
 	{
@@ -128,6 +129,7 @@ namespace renderer
 	namespace raii
 	{
 		using Fence = ::vk::raii::Fence;
-		using QueryPool = ::vk::raii::QueryPool;
+		using StatisticsQuery = ::vk::raii::QueryPool;
+		using TimestampQuery = ::vk::raii::QueryPool;
 	}
 }

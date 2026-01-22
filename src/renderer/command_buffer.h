@@ -68,8 +68,12 @@ namespace renderer
 
 		void dispatch( uint32_t x, uint32_t y, uint32_t z );
 
-		void reset_query_pool( QueryPool pool, uint32_t first, uint32_t count );
-		void write_timestamp( QueryPool pool, uint32_t index );
+		void reset_query( TimestampQuery query, uint32_t first, uint32_t count );
+		void write_timestamp( TimestampQuery query, uint32_t index );
+
+		void reset_query( StatisticsQuery query );
+		void begin_query( StatisticsQuery query );
+		void end_query( StatisticsQuery query );
 
 		// Get the underlying renderer buffer, for integration with 3rd party (eg: imgui)
 		VkCommandBuffer get_impl() const { return *_cmd_buffer; }
