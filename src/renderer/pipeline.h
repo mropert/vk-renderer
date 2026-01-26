@@ -43,8 +43,8 @@ namespace renderer
 			Texture::Format color_format;
 			Texture::Format depth_format;
 			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
-			CullMode cull_mode = CullMode::FRONT;
-			FrontFace front_face = FrontFace::CLOCKWISE;
+			CullMode cull_mode = CullMode::BACK;
+			FrontFace front_face = FrontFace::COUNTER_CLOCKWISE;
 			// Compute & graphics pipelines
 			uint32_t push_constants_size = 0;
 		};
