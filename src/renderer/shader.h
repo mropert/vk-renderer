@@ -1,7 +1,6 @@
 #pragma once
 
 #include <renderer/common.h>
-#include <span>
 
 namespace renderer
 {
@@ -21,34 +20,18 @@ namespace renderer
 
 	struct ShaderSource
 	{
+		struct Define
+		{
+			std::string key;
+			std::string value;
+		};
+
 		std::string path;
 		ShaderStage stage;
+		std::vector<Define> defines;
 	};
 
 	class ShaderCompiler;
-
-	namespace raii
-	{
-		class ShaderCode;
-	}
-
-	class ShaderCode
-	{
-	public:
-		constexpr ShaderCode() = default;
-
-	private:
-		constexpr ShaderCode( std::span<const uint32_t> blob, ShaderStage stage )
-			: _blob( blob )
-			, _stage( stage )
-		{
-		}
-
-		friend raii::ShaderCode;
-		friend class Device;
-		std::span<const uint32_t> _blob;
-		ShaderStage _stage;
-	};
 
 	namespace raii
 	{
@@ -59,24 +42,20 @@ namespace renderer
 
 			const uint32_t* get_data() const { return _bytes.data(); }
 			uint32_t get_size() const { return _bytes.size(); }
-			ShaderStage get_stage() const { return _stage; }
-			const std::string& get_filename() const { return _filename; }
-
-			operator renderer::ShaderCode() const { return { _bytes, _stage }; }
+			uint32_t get_size_bytes() const { return _bytes.size() * sizeof( uint32_t ); }
+			const ShaderSource& get_source() const { return _source; }
 
 		private:
-			ShaderCode( ShaderStage stage, std::vector<uint32_t> bytes, std::string filename )
-				: _stage( stage )
+			ShaderCode( ShaderSource source, std::vector<uint32_t> bytes )
+				: _source( std::move( source ) )
 				, _bytes( std::move( bytes ) )
-				, _filename( std::move( filename ) )
 			{
 			}
 
 			friend ShaderCompiler;
 
+			ShaderSource _source;
 			std::vector<uint32_t> _bytes;
-			std::string _filename;
-			ShaderStage _stage;
 		};
 	}
 }

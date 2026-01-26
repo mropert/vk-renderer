@@ -53,11 +53,11 @@ namespace renderer
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
 
 		raii::Pipeline create_graphics_pipeline( const Pipeline::Desc& desc,
-												 std::span<const ShaderCode> shaders,
+												 std::span<const raii::ShaderCode> shaders,
 												 const BindlessManagerBase& bindless_manager );
 
 		raii::Pipeline
-		create_compute_pipeline( const Pipeline::Desc& desc, ShaderCode shader, const BindlessManagerBase& bindless_manager );
+		create_compute_pipeline( const Pipeline::Desc& desc, const raii::ShaderCode& shader, const BindlessManagerBase& bindless_manager );
 
 		raii::Fence create_fence( bool signaled = false );
 		void wait_for_fences( std::span<const Fence> fences, uint64_t timeout );

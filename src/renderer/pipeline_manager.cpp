@@ -6,10 +6,9 @@
 
 namespace
 {
-	renderer::raii::ShaderCode
-	compile_shader( const renderer::ShaderCompiler& compiler, std::string_view path, renderer::ShaderStage stage )
+	renderer::raii::ShaderCode compile_shader( const renderer::ShaderCompiler& compiler, renderer::ShaderSource source )
 	{
-		auto compilation_result = compiler.compile( stage, path );
+		auto compilation_result = compiler.compile( std::move( source ) );
 		if ( !compilation_result )
 		{
 			throw renderer::Error( "Shader compilation failed: " + compilation_result.error() );
@@ -86,21 +85,15 @@ renderer::raii::Pipeline renderer::PipelineManager::make( const Pipeline::Desc& 
 {
 	OPTICK_EVENT();
 	std::vector<renderer::raii::ShaderCode> shaders( sources.size() );
-	tbb::parallel_for( 0zu,
-					   sources.size(),
-					   [ & ]( size_t index )
-					   { shaders[ index ] = compile_shader( _compiler, sources[ index ].path, sources[ index ].stage ); } );
-
-	std::vector<renderer::ShaderCode> shader_descs;
-	std::copy( begin( shaders ), end( shaders ), std::back_inserter( shader_descs ) );
+	tbb::parallel_for( 0zu, sources.size(), [ & ]( size_t index ) { shaders[ index ] = compile_shader( _compiler, sources[ index ] ); } );
 
 	if ( sources.size() == 1 && sources[ 0 ].stage == ShaderStage::COMPUTE )
 	{
-		return _device->create_compute_pipeline( desc, shader_descs[ 0 ], *_bindless_manager );
+		return _device->create_compute_pipeline( desc, shaders[ 0 ], *_bindless_manager );
 	}
 	else
 	{
-		return _device->create_graphics_pipeline( desc, shader_descs, *_bindless_manager );
+		return _device->create_graphics_pipeline( desc, shaders, *_bindless_manager );
 	}
 }
 

@@ -266,7 +266,7 @@ vk::raii::PipelineLayout renderer::Device::create_pipeline_layout( vk::ShaderSta
 }
 
 renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipeline::Desc& desc,
-																	 std::span<const ShaderCode> shaders,
+																	 std::span<const raii::ShaderCode> shaders,
 																	 const BindlessManagerBase& bindless_manager )
 {
 	OPTICK_EVENT();
@@ -274,7 +274,7 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 	vk::ShaderStageFlags used_stages {};
 	for ( const auto& shader : shaders )
 	{
-		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader._stage );
+		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader.get_source().stage );
 	}
 
 	auto layout = create_pipeline_layout( used_stages, desc.push_constants_size, bindless_manager );
@@ -311,9 +311,9 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 
 	for ( const auto& shader : shaders )
 	{
-		modules.push_back( _device.createShaderModule( { .codeSize = shader._blob.size_bytes(), .pCode = shader._blob.data() } ) );
+		modules.push_back( _device.createShaderModule( { .codeSize = shader.get_size_bytes(), .pCode = shader.get_data() } ) );
 		shader_stages.push_back(
-			{ .stage = static_cast<vk::ShaderStageFlagBits>( shader._stage ), .module = modules.back(), .pName = "main" } );
+			{ .stage = static_cast<vk::ShaderStageFlagBits>( shader.get_source().stage ), .module = modules.back(), .pName = "main" } );
 	}
 
 	const vk::GraphicsPipelineCreateInfo pipeline_info = { .pNext = &render_info,
@@ -334,13 +334,14 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 	return raii::Pipeline( std::move( layout ), std::move( pipeline ), desc, used_stages, Pipeline::Type::Graphics );
 }
 
-renderer::raii::Pipeline
-renderer::Device::create_compute_pipeline( const Pipeline::Desc& desc, ShaderCode shader, const BindlessManagerBase& bindless_manager )
+renderer::raii::Pipeline renderer::Device::create_compute_pipeline( const Pipeline::Desc& desc,
+																	const raii::ShaderCode& shader,
+																	const BindlessManagerBase& bindless_manager )
 {
 	const vk::ShaderStageFlags used_stages = vk::ShaderStageFlagBits::eCompute;
 	auto layout = create_pipeline_layout( used_stages, desc.push_constants_size, bindless_manager );
 
-	const auto shader_module = _device.createShaderModule( { .codeSize = shader._blob.size_bytes(), .pCode = shader._blob.data() } );
+	const auto shader_module = _device.createShaderModule( { .codeSize = shader.get_size_bytes(), .pCode = shader.get_data() } );
 
 	const vk::ComputePipelineCreateInfo info {
 		.stage { .stage = vk::ShaderStageFlagBits::eCompute, .module = shader_module, .pName = "main" },

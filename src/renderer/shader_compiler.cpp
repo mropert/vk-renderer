@@ -99,21 +99,20 @@ const std::filesystem::path& renderer::ShaderCompiler::get_base_directory() cons
 	return _impl->base_dir;
 }
 
-std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderStage stage,
-																						  std::string_view filename ) const
+std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderSource source ) const
 {
-	const auto path = _impl->base_dir / filename;
+	const auto path = _impl->base_dir / source.path;
 	std::ifstream istream( path );
 	if ( !istream )
 	{
 		return std::unexpected( std::format( "Couldn't open shader file '{}'", path.string() ) );
 	}
-	const std::string source { std::istreambuf_iterator<char>( istream ), std::istreambuf_iterator<char>() };
-	return compile( stage, source, path.string() );
+	const std::string source_code { std::istreambuf_iterator<char>( istream ), std::istreambuf_iterator<char>() };
+	return compile( std::move( source ), source_code );
 }
 
-std::expected<renderer::raii::ShaderCode, std::string>
-renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, std::string filename ) const
+std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderSource source,
+																						  std::string_view source_code ) const
 {
 	OPTICK_EVENT();
 	shaderc::CompileOptions options;
@@ -121,14 +120,18 @@ renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, s
 	options.SetTargetEnvironment( shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2 );
 	options.SetOptimizationLevel( shaderc_optimization_level_performance );
 	options.SetIncluder( std::make_unique<ShaderIncluder>( _impl->base_dir ) );
+	for ( const auto& define : source.defines )
+	{
+		options.AddMacroDefinition( define.key, define.value );
+	}
 #ifdef _DEBUG
 	options.SetGenerateDebugInfo();
 #endif
 
-	const auto result = _impl->compiler.CompileGlslToSpv( source.data(),
-														  source.size(),
-														  get_shader_kind( stage ),
-														  filename.c_str(),
+	const auto result = _impl->compiler.CompileGlslToSpv( source_code.data(),
+														  source_code.size(),
+														  get_shader_kind( source.stage ),
+														  source.path.c_str(),
 														  options );
 
 	if ( result.GetCompilationStatus() != shaderc_compilation_status_success )
@@ -138,5 +141,5 @@ renderer::ShaderCompiler::compile( ShaderStage stage, std::string_view source, s
 
 	// Hiding away shaderc means we need to make a copy since it doesn't provide a way to take ownership of the data
 	// If this proves to be a serious hindrance we could replace the vector with a type erased shaderc_compilation_result_t
-	return raii::ShaderCode( stage, std::vector<uint32_t>( result.begin(), result.end() ), std::move( filename ) );
+	return raii::ShaderCode( std::move( source ), std::vector<uint32_t>( result.begin(), result.end() ) );
 }

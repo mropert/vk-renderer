@@ -18,9 +18,9 @@ namespace renderer
 		const std::filesystem::path& get_base_directory() const;
 
 		// Read file and compile
-		std::expected<raii::ShaderCode, std::string> compile( ShaderStage stage, std::string_view filename ) const;
+		std::expected<raii::ShaderCode, std::string> compile( ShaderSource source ) const;
 		// Compile from memory source
-		std::expected<raii::ShaderCode, std::string> compile( ShaderStage stage, std::string_view source, std::string filename ) const;
+		std::expected<raii::ShaderCode, std::string> compile( ShaderSource source, std::string_view code ) const;
 
 	private:
 		struct Impl;
