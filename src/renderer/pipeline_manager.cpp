@@ -181,9 +181,19 @@ std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 	{
 		if ( item.result )
 		{
-			_shaders[ item.index ].code = std::move( *item.result );
+			_shaders[ item.index ].code = std::move( item.result.value() );
 			_shaders[ item.index ].last_write = item.last_write;
 			rebuilt.emplace_back( item.index );
+		}
+		else if ( _shaders[ item.index ].code.get_size() == 0 )
+		{
+			// Propagate the error if first time compile of a shader fails
+			_pending_errors.push_back( std::move( item.result.error() ) );
+		}
+		else
+		{
+			// Swallow the error but update the timestamp to make sure we don't keep rebuilding a broken shader
+			_shaders[ item.index ].last_write = item.last_write;
 		}
 	}
 	return rebuilt;

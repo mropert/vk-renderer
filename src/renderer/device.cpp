@@ -216,7 +216,8 @@ renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter
 	const vk::SamplerReductionModeCreateInfo reduction_info { .reductionMode = static_cast<vk::SamplerReductionMode>( mode ) };
 	auto sampler = _device.createSampler( vk::SamplerCreateInfo { .pNext = &reduction_info,
 																  .magFilter = static_cast<vk::Filter>( filter ),
-																  .minFilter = static_cast<vk::Filter>( filter ) } );
+																  .minFilter = static_cast<vk::Filter>( filter ),
+																  .maxLod = VK_LOD_CLAMP_NONE } );
 	return raii::Sampler( std::move( sampler ) );
 }
 

@@ -175,8 +175,16 @@ void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment
 	{
 		depth_attachment = { .imageView = depth_target.target._view,
 							 .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-							 .loadOp = vk::AttachmentLoadOp::eClear,
 							 .storeOp = vk::AttachmentStoreOp::eStore };
+		if ( depth_target.clear_value )
+		{
+			depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+			depth_attachment.clearValue = { .depthStencil = { .depth = ( *depth_target.clear_value )[ 0 ] } };
+		}
+		else
+		{
+			depth_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
+		}
 		if ( depth_target.resolve_target._view )
 		{
 			depth_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
