@@ -24,13 +24,18 @@ namespace renderer
 		{
 			std::string key;
 			std::string value;
+
+			auto operator<=>( const Define& other ) const = default;
 		};
 
 		std::string path;
 		ShaderStage stage;
 		std::vector<Define> defines;
+
+		auto operator<=>( const ShaderSource& other ) const = default;
 	};
 
+	class PipelineManager;
 	class ShaderCompiler;
 
 	namespace raii
@@ -45,6 +50,8 @@ namespace renderer
 			uint32_t get_size_bytes() const { return _bytes.size() * sizeof( uint32_t ); }
 			const ShaderSource& get_source() const { return _source; }
 
+			auto operator<=>( const ShaderCode& other ) const { return _source <=> other._source; }
+
 		private:
 			ShaderCode( ShaderSource source, std::vector<uint32_t> bytes )
 				: _source( std::move( source ) )
@@ -52,6 +59,7 @@ namespace renderer
 			{
 			}
 
+			friend PipelineManager;
 			friend ShaderCompiler;
 
 			ShaderSource _source;

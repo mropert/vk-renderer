@@ -53,7 +53,7 @@ namespace renderer
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
 
 		raii::Pipeline create_graphics_pipeline( const Pipeline::Desc& desc,
-												 std::span<const raii::ShaderCode> shaders,
+												 std::span<const raii::ShaderCode*> shaders,
 												 const BindlessManagerBase& bindless_manager );
 
 		raii::Pipeline

@@ -266,7 +266,7 @@ vk::raii::PipelineLayout renderer::Device::create_pipeline_layout( vk::ShaderSta
 }
 
 renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipeline::Desc& desc,
-																	 std::span<const raii::ShaderCode> shaders,
+																	 std::span<const raii::ShaderCode*> shaders,
 																	 const BindlessManagerBase& bindless_manager )
 {
 	OPTICK_EVENT();
@@ -274,7 +274,7 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 	vk::ShaderStageFlags used_stages {};
 	for ( const auto& shader : shaders )
 	{
-		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader.get_source().stage );
+		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader->get_source().stage );
 	}
 
 	auto layout = create_pipeline_layout( used_stages, desc.push_constants_size, bindless_manager );
@@ -309,11 +309,11 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 	std::vector<vk::raii::ShaderModule> modules;
 	std::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
 
-	for ( const auto& shader : shaders )
+	for ( const auto shader : shaders )
 	{
-		modules.push_back( _device.createShaderModule( { .codeSize = shader.get_size_bytes(), .pCode = shader.get_data() } ) );
+		modules.push_back( _device.createShaderModule( { .codeSize = shader->get_size_bytes(), .pCode = shader->get_data() } ) );
 		shader_stages.push_back(
-			{ .stage = static_cast<vk::ShaderStageFlagBits>( shader.get_source().stage ), .module = modules.back(), .pName = "main" } );
+			{ .stage = static_cast<vk::ShaderStageFlagBits>( shader->get_source().stage ), .module = modules.back(), .pName = "main" } );
 	}
 
 	const vk::GraphicsPipelineCreateInfo pipeline_info = { .pNext = &render_info,

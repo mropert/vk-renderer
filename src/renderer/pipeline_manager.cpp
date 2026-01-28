@@ -6,15 +6,30 @@
 
 namespace
 {
-	renderer::raii::ShaderCode compile_shader( const renderer::ShaderCompiler& compiler, renderer::ShaderSource source )
+	std::expected<renderer::raii::ShaderCode, renderer::Error> compile_shader( const renderer::ShaderCompiler& compiler,
+																			   renderer::ShaderSource source )
 	{
 		auto compilation_result = compiler.compile( std::move( source ) );
 		if ( !compilation_result )
 		{
-			throw renderer::Error( "Shader compilation failed: " + compilation_result.error() );
+			return std::unexpected( renderer::Error( "Shader compilation failed: " + compilation_result.error() ) );
 		}
 		return std::move( compilation_result.value() );
 	}
+
+	// XXX: TBB seems to creates a different scheduler/arena for jthreads
+	// We discovered this because we had to set a different observer instance to see the TBB workers used by the bindless manager
+
+	struct tbb_observer final : public tbb::task_scheduler_observer
+	{
+		void on_scheduler_entry( bool is_worker ) override
+		{
+			if ( is_worker )
+			{
+				static thread_local OPTICK_THREAD( "TBB Worker" );
+			}
+		}
+	};
 }
 
 renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManagerBase& bindless_manager )
@@ -25,6 +40,8 @@ renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::pat
 		  [ & ]( std::stop_token tok )
 		  {
 			  OPTICK_THREAD( "pipeline_rebuild" );
+			  tbb_observer observer;
+			  observer.observe();
 			  while ( !tok.stop_requested() )
 			  {
 				  rebuild_job();
@@ -38,21 +55,25 @@ renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::pat
 {
 }
 
-renderer::PipelineHandle renderer::PipelineManager::add( const Pipeline::Desc& desc, std::initializer_list<ShaderSource> shaders )
+renderer::PipelineHandle renderer::PipelineManager::add( Pipeline::Desc desc, std::initializer_list<ShaderSource> sources )
 {
-	const auto& base_dir = _compiler.get_base_directory();
-	std::vector<ShaderSource> sources = shaders;
-	std::vector<std::filesystem::file_time_type> last_writes;
-	last_writes.reserve( sources.size() );
-	for ( const auto source : sources )
-	{
-		last_writes.emplace_back( std::filesystem::last_write_time( base_dir / source.path ) );
-	}
-
-	auto pipeline = make( desc, sources );
-	std::scoped_lock lock( _mtx );
+	std::unique_lock lock( _mtx );
 	auto handle = static_cast<PipelineHandle>( _items.size() );
-	_items.emplace_back( std::move( pipeline ), std::move( sources ), std::move( last_writes ) );
+	auto& entry = _items.emplace_back( std::move( desc ) );
+	entry.sources.reserve( sources.size() );
+	for ( const auto& source : sources )
+	{
+		// Linear find ain't great but for our amount of shaders it's fine at the moment
+		auto it = std::find_if( begin( _shaders ),
+								end( _shaders ),
+								[ &source ]( const auto& shader ) { return shader.code.get_source() == source; } );
+		if ( it == end( _shaders ) )
+		{
+			_shaders.emplace_back( raii::ShaderCode( source, {} ) );
+			it = end( _shaders ) - 1;
+		}
+		entry.sources.push_back( std::distance( begin( _shaders ), it ) );
+	}
 	return handle;
 }
 
@@ -62,105 +83,168 @@ void renderer::PipelineManager::update()
 	// FIXME: to avoid blocking on a rendering thread we should probably do a try_lock() here
 	// and bail if it fails to acquire it (and try again next frame).
 	// But so far this hasn't been an issue.
-	std::scoped_lock lock( _mtx );
-	for ( auto& [ handle, item ] : _updated_items )
+	std::unique_lock lock( _mtx );
+	for ( auto& [ handle, result ] : _updated_items )
 	{
-		// Preserve working shaders if the new ones failed to compile/link, but update timestamps so we don't keep rebuilding
-		if ( auto pipeline = std::get_if<raii::Pipeline>( &item.result ) )
+		// Preserve working shaders if the new ones failed to compile/link
+		if ( result )
 		{
-			_device->queue_deletion( std::move( _items[ handle ].pipeline ) );
-			_items[ handle ].pipeline = std::move( *pipeline );
+			_device->queue_deletion( std::move( std::get<raii::Pipeline>( _items[ handle ].pipeline ) ) );
+			_items[ handle ].pipeline = std::move( result.value() );
 		}
-		_items[ handle ].last_writes = std::move( item.last_writes );
 	}
 	_updated_items.clear();
 }
 
 renderer::Pipeline renderer::PipelineManager::get( PipelineHandle pipeline ) const
 {
-	return _items[ pipeline ].pipeline;
+	return std::get<raii::Pipeline>( _items[ pipeline ].pipeline );
 }
 
-renderer::raii::Pipeline renderer::PipelineManager::make( const Pipeline::Desc& desc, std::span<const ShaderSource> sources ) const
+void renderer::PipelineManager::wait_ready()
 {
 	OPTICK_EVENT();
-	std::vector<renderer::raii::ShaderCode> shaders( sources.size() );
-	tbb::parallel_for( 0zu, sources.size(), [ & ]( size_t index ) { shaders[ index ] = compile_shader( _compiler, sources[ index ] ); } );
-
-	if ( sources.size() == 1 && sources[ 0 ].stage == ShaderStage::COMPUTE )
+	std::unique_lock lock( _mtx );
+	while ( _pending_errors.empty() && _available_pipelines != _items.size() )
 	{
-		return _device->create_compute_pipeline( desc, shaders[ 0 ], *_bindless_manager );
+		_ready_signal.wait( lock );
 	}
-	else
+	if ( !_pending_errors.empty() )
 	{
-		return _device->create_graphics_pipeline( desc, shaders, *_bindless_manager );
+		throw _pending_errors.front();
 	}
 }
 
-namespace
+renderer::PipelineManager::MakePipelineResult renderer::PipelineManager::make( const Pipeline::Desc& desc,
+																			   std::span<const raii::ShaderCode*> shaders ) const
 {
+	OPTICK_EVENT();
+	try
+	{
+		if ( shaders.size() == 1 && shaders[ 0 ]->get_source().stage == ShaderStage::COMPUTE )
+		{
+			return _device->create_compute_pipeline( desc, *shaders[ 0 ], *_bindless_manager );
+		}
+		else
+		{
+			return _device->create_graphics_pipeline( desc, shaders, *_bindless_manager );
+		}
+	}
+	catch ( Error e )
+	{
+		return std::unexpected( std::move( e ) );
+	}
+}
+
+std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
+{
+	OPTICK_EVENT();
 	struct RebuildRequest
 	{
-		renderer::PipelineHandle handle;
-		renderer::Pipeline::Desc desc;
-		std::vector<renderer::ShaderSource> sources;
-		std::vector<std::filesystem::file_time_type> last_writes;
-		std::variant<renderer::raii::Pipeline, renderer::Error> result;
+		int index;
+		ShaderSource source;
+		std::filesystem::file_time_type last_write;
+		std::expected<raii::ShaderCode, Error> result;
 	};
-}
 
-void renderer::PipelineManager::rebuild_job()
-{
-	OPTICK_EVENT();
 	std::vector<RebuildRequest> to_rebuild;
+
 	{
-		std::scoped_lock lock( _mtx );
-		// FIXME: if shaders share sources we will check their last write time twice (or more)
-		// We should instead have a map of a filename -> set<PipelineHandle>.
+		std::unique_lock lock( _mtx );
+		// FIXME: we do not detect writes to includes, only the top level source file
 		// Also, instead of polling the filesystem every 1s we should use a filewatcher,
 		// but std::filesystem doesn't provide one and this isn't worth writing our own at the moment.
-		for ( PipelineHandle i = 0; i < _items.size(); ++i )
+		for ( int i = 0; i < _shaders.size(); ++i )
 		{
-			// Check if we somehow don't already have rebuilt the pipeline but update() hasn't been called yet
-			const auto it = _updated_items.find( i );
-			const auto& timestamps = it != end( _updated_items ) ? it->second.last_writes : _items[ i ].last_writes;
 			const auto& base_dir = _compiler.get_base_directory();
-			std::vector<std::filesystem::file_time_type> last_writes( timestamps.size() );
-			bool needs_rebuild = false;
-			for ( int source = 0; source < _items[ i ].sources.size(); ++source )
+			const auto timestamp = std::filesystem::last_write_time( base_dir / _shaders[ i ].code.get_source().path );
+			if ( timestamp > _shaders[ i ].last_write )
 			{
-				last_writes[ source ] = std::filesystem::last_write_time( base_dir / _items[ i ].sources[ source ].path );
-				needs_rebuild = needs_rebuild || last_writes[ source ] > timestamps[ source ];
-			}
-			if ( needs_rebuild )
-			{
-				to_rebuild.push_back( RebuildRequest { .handle = i,
-													   .desc = _items[ i ].pipeline.get_desc(),
-													   .sources = _items[ i ].sources,
-													   .last_writes = std::move( last_writes ) } );
+				to_rebuild.emplace_back( i, _shaders[ i ].code.get_source(), timestamp );
 			}
 		}
 	}
 	if ( to_rebuild.empty() )
 	{
-		return;
+		return {};
 	}
 
+	tbb::parallel_for( 0zu,
+					   to_rebuild.size(),
+					   [ & ]( size_t index )
+					   { to_rebuild[ index ].result = compile_shader( _compiler, std::move( to_rebuild[ index ].source ) ); } );
+
+	std::vector<int> rebuilt;
+	rebuilt.reserve( to_rebuild.size() );
+	std::unique_lock lock( _mtx );
 	for ( auto& item : to_rebuild )
 	{
-		try
+		if ( item.result )
 		{
-			item.result = make( item.desc, item.sources );
-		}
-		catch ( Error e )
-		{
-			item.result = std::move( e );
+			_shaders[ item.index ].code = std::move( *item.result );
+			_shaders[ item.index ].last_write = item.last_write;
+			rebuilt.emplace_back( item.index );
 		}
 	}
-	std::scoped_lock lock( _mtx );
-	for ( auto& item : to_rebuild )
+	return rebuilt;
+}
+
+void renderer::PipelineManager::rebuild_job()
+{
+	OPTICK_EVENT();
+	const auto rebuilt_shaders = rebuild_outdated_shaders();
+	std::vector<const raii::ShaderCode*> shaders;
+
+	std::unique_lock lock( _mtx );
+	for ( PipelineHandle i = 0; i < _items.size(); ++i )
 	{
-		_updated_items.insert_or_assign( item.handle,
-										 RebuiltItem { .result = std::move( item.result ), .last_writes = std::move( item.last_writes ) } );
+		int available = 0;
+		int rebuilt = 0;
+		for ( const auto source : _items[ i ].sources )
+		{
+			if ( _shaders[ source ].code.get_size() != 0 )
+			{
+				++available;
+			}
+			if ( std::find( begin( rebuilt_shaders ), end( rebuilt_shaders ), source ) != end( rebuilt_shaders ) )
+			{
+				++rebuilt;
+			}
+		}
+		const auto unbuilt_desc = std::get_if<Pipeline::Desc>( &_items[ i ].pipeline );
+		if ( available == _items[ i ].sources.size() && ( unbuilt_desc || rebuilt > 0 ) )
+		{
+			shaders.clear();
+			for ( const auto source : _items[ i ].sources )
+			{
+				shaders.push_back( &_shaders[ source ].code );
+			}
+			if ( unbuilt_desc )
+			{
+				auto res = make( *unbuilt_desc, shaders );
+				if ( res )
+				{
+					// Immediately assign the pipeline, by definition it can't be in use just yet
+					_items[ i ].pipeline = std::move( res.value() );
+					++_available_pipelines;
+				}
+				else
+				{
+					_pending_errors.push_back( std::move( res.error() ) );
+					_updated_items.insert_or_assign( i, std::move( res ) );
+				}
+			}
+			else
+			{
+				_updated_items.insert_or_assign( i, make( std::get<raii::Pipeline>( _items[ i ].pipeline ).get_desc(), shaders ) );
+			}
+		}
+	}
+	const bool signal_ready = !_pending_errors.empty() || _available_pipelines == _items.size();
+	lock.unlock();
+
+	if ( signal_ready )
+	{
+		_ready_signal.notify_one();
 	}
 }
