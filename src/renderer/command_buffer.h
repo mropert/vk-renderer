@@ -1,7 +1,5 @@
 #pragma once
 
-#include <array>
-#include <optional>
 #include <renderer/common.h>
 #include <renderer/texture.h>
 

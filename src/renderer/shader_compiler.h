@@ -1,11 +1,7 @@
 #pragma once
 
-#include <expected>
-#include <filesystem>
-#include <memory>
 #include <renderer/common.h>
 #include <renderer/shader.h>
-#include <string_view>
 
 namespace renderer
 {

@@ -4,7 +4,6 @@
 #include <renderer/common.h>
 #include <renderer/sampler.h>
 #include <renderer/texture.h>
-#include <tuple>
 
 namespace renderer
 {

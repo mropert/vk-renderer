@@ -1,6 +1,12 @@
-#include "buffer.h"
-
+module;
 #include <cassert>
+#include <vma/vk_mem_alloc.h>
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
+
+module renderer;
 
 void renderer::raii::Buffer::map()
 {

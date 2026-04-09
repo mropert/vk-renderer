@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(/Zi /MP)
 add_link_options(/DEBUG)
 
+cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH VSTOOLS_DIR)
+cmake_path(APPEND VSTOOLS_DIR "../../..")
+cmake_path(NORMAL_PATH VSTOOLS_DIR)
+
 find_package(SDL3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(unofficial-shaderc CONFIG REQUIRED)
@@ -19,6 +23,13 @@ target_sources(VkBoostrap PRIVATE third_party/vk-bootstrap/v1.4.305/VkBootstrap.
 target_include_directories(VkBoostrap PUBLIC third_party/vk-bootstrap/v1.4.305)
 target_link_libraries(VkBoostrap PUBLIC Vulkan::Vulkan)
 
+add_library( StdModule )
+target_sources( StdModule PRIVATE
+  FILE_SET CXX_MODULES
+  BASE_DIRS ${VSTOOLS_DIR}
+  FILES ${VSTOOLS_DIR}/modules/std.ixx
+)
+
 add_library( VulkanHppModule )
 target_sources( VulkanHppModule PRIVATE
   FILE_SET CXX_MODULES
@@ -26,6 +37,7 @@ target_sources( VulkanHppModule PRIVATE
   FILES ${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm
 )
 target_compile_definitions( VulkanHppModule PUBLIC
+  VULKAN_HPP_ENABLE_STD_MODULE
   VULKAN_HPP_NO_SETTERS
   VULKAN_HPP_NO_CONSTRUCTORS
 )
@@ -47,12 +59,15 @@ target_sources(renderer
 		src/renderer/texture.cpp
 		src/renderer/vma_impl.cpp
 )
+target_sources(renderer
+    PUBLIC
+        FILE_SET modules TYPE CXX_MODULES FILES module/renderer.ixx
+)
 target_include_directories(renderer PUBLIC src)
 target_link_libraries(renderer PRIVATE SDL3::SDL3 VkBoostrap unofficial::shaderc::shaderc TBB::tbb)
 target_link_libraries(renderer PUBLIC Vulkan::Vulkan VulkanHppModule GPUOpen::VulkanMemoryAllocator)
 
 if( TARGET Optick )
-	target_compile_definitions(renderer PRIVATE USE_OPTICK)
 	target_link_libraries(renderer PRIVATE Optick)
 endif()
 
@@ -61,7 +76,6 @@ target_sources(clear_color PRIVATE examples/clear_color.cpp)
 target_link_libraries(clear_color PRIVATE renderer SDL3::SDL3)
 
 if( TARGET Optick )
-	target_compile_definitions(clear_color PRIVATE USE_OPTICK)
 	target_link_libraries(clear_color PRIVATE Optick)
 endif()
 

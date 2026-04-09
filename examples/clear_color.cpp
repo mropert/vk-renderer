@@ -1,12 +1,14 @@
+#if defined( __INTELLISENSE__ ) || 1
+#include <renderer/renderer.h>
+#else
+import renderer;
+#endif
+
 #include <SDL3/SDL.h>
-#include <renderer/command_buffer.h>
-#include <renderer/device.h>
-#include <renderer/swapchain.h>
 
 #ifdef USE_OPTICK
 #include <optick.h>
 #endif
-
 
 int main()
 {

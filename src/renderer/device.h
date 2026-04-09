@@ -1,15 +1,11 @@
 #pragma once
 
-#include <array>
-#include <initializer_list>
-#include <queue>
 #include <renderer/buffer.h>
 #include <renderer/common.h>
 #include <renderer/pipeline.h>
 #include <renderer/sampler.h>
 #include <renderer/shader.h>
 #include <renderer/texture.h>
-#include <span>
 
 namespace renderer
 {

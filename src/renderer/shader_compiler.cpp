@@ -1,9 +1,17 @@
-#include "shader_compiler.h"
-
-#include <format>
-#include <fstream>
+module;
 #include <renderer/details/profiler.h>
 #include <shaderc/shaderc.hpp>
+
+#if defined( __INTELLISENSE__ ) || !defined( VULKAN_HPP_ENABLE_STD_MODULE )
+#include <format>
+#include <fstream>
+#endif
+
+module renderer;
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
 
 namespace
 {

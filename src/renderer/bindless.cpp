@@ -1,9 +1,12 @@
-#include "bindless.h"
+module;
 
-#include <algorithm>
-#include <array>
 #include <cassert>
-#include <renderer/device.h>
+
+module renderer;
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
 
 renderer::BindlessManagerBase::BindlessBuffer::BindlessBuffer( Device& device, uint32_t capacity )
 {

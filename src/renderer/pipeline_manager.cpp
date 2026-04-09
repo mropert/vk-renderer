@@ -1,8 +1,12 @@
-#include "pipeline_manager.h"
-
+module;
 #include <renderer/details/profiler.h>
-#include <renderer/device.h>
 #include <renderer/third_party/tbb.h>
+
+module renderer;
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
 
 namespace
 {

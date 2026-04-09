@@ -1,9 +1,7 @@
 #pragma once
 
-#include <array>
 #include <renderer/common.h>
 #include <renderer/texture.h>
-#include <variant>
 
 namespace renderer
 {

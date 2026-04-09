@@ -1,4 +1,8 @@
-#include "texture.h"
+module renderer;
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
 
 std::size_t renderer::Texture::get_bpp( Format format )
 {

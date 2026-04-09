@@ -1,18 +1,9 @@
 #pragma once
 
-#include <condition_variable>
-#include <expected>
-#include <filesystem>
-#include <mutex>
 #include <renderer/common.h>
 #include <renderer/pipeline.h>
 #include <renderer/shader.h>
 #include <renderer/shader_compiler.h>
-#include <span>
-#include <thread>
-#include <unordered_map>
-#include <variant>
-#include <vector>
 
 namespace renderer
 {

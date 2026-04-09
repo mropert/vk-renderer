@@ -1,11 +1,13 @@
-#include "swapchain.h"
+module;
 
 #include <VkBootstrap.h>
-#include <ranges>
-#include <renderer/command_buffer.h>
 #include <renderer/details/profiler.h>
-#include <renderer/device.h>
-#include <renderer/texture.h>
+
+module renderer;
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
 
 renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsync )
 	: _device( &device )

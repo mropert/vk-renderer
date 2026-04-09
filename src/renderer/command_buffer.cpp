@@ -1,11 +1,13 @@
-#include "command_buffer.h"
-
+module;
 #include <cassert>
-#include <renderer/bindless.h>
-#include <renderer/buffer.h>
 #include <renderer/details/profiler.h>
-#include <renderer/pipeline.h>
-#include <renderer/texture.h>
+#include <vulkan/vulkan_core.h>
+
+module renderer;
+
+#if defined( __INTELLISENSE__ )
+#include <renderer/renderer.h>
+#endif
 
 void renderer::CommandBuffer::begin()
 {
@@ -100,6 +102,7 @@ void renderer::CommandBuffer::copy_buffer( const Buffer& src,
 										   const Buffer& dest,
 										   std::size_t dest_offset )
 {
+	assert( dest_offset + size <= dest._size );
 	_cmd_buffer.copyBuffer( src._buffer, dest._buffer, vk::BufferCopy { .srcOffset = offset, .dstOffset = dest_offset, .size = size } );
 }
 
