@@ -3,6 +3,12 @@ module;
 #include <renderer/details/profiler.h>
 #include <vulkan/vulkan_core.h>
 
+#ifndef VULKAN_HPP_ENABLE_STD_MODULE
+#include <cstddef>
+#include <utility>
+#include <vector>
+#endif
+
 module renderer;
 
 #if defined( __INTELLISENSE__ )

@@ -2,6 +2,11 @@ module;
 #include <renderer/details/profiler.h>
 #include <renderer/third_party/tbb.h>
 
+#ifndef VULKAN_HPP_ENABLE_STD_MODULE
+#include <filesystem>
+#include <variant>
+#endif
+
 module renderer;
 
 #if defined( __INTELLISENSE__ )

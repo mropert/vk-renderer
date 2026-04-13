@@ -8,10 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(/Zi /MP)
 add_link_options(/DEBUG)
 
-cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH VSTOOLS_DIR)
-cmake_path(APPEND VSTOOLS_DIR "../../..")
-cmake_path(NORMAL_PATH VSTOOLS_DIR)
-
 find_package(SDL3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(unofficial-shaderc CONFIG REQUIRED)
@@ -22,6 +18,10 @@ add_library(VkBoostrap STATIC)
 target_sources(VkBoostrap PRIVATE third_party/vk-bootstrap/v1.4.305/VkBootstrap.cpp)
 target_include_directories(VkBoostrap PUBLIC third_party/vk-bootstrap/v1.4.305)
 target_link_libraries(VkBoostrap PUBLIC Vulkan::Vulkan)
+
+cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH VSTOOLS_DIR)
+cmake_path(APPEND VSTOOLS_DIR "../../..")
+cmake_path(NORMAL_PATH VSTOOLS_DIR)
 
 add_library( StdModule )
 target_sources( StdModule PRIVATE
@@ -37,7 +37,7 @@ target_sources( VulkanHppModule PRIVATE
   FILES ${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm
 )
 target_compile_definitions( VulkanHppModule PUBLIC
-  VULKAN_HPP_ENABLE_STD_MODULE
+  #VULKAN_HPP_ENABLE_STD_MODULE
   VULKAN_HPP_NO_SETTERS
   VULKAN_HPP_NO_CONSTRUCTORS
 )

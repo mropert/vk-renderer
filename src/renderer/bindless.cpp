@@ -1,6 +1,11 @@
 module;
 
 #include <cassert>
+#ifndef VULKAN_HPP_ENABLE_STD_MODULE
+#include <cstddef>
+#include <utility>
+#include <vector>
+#endif
 
 module renderer;
 

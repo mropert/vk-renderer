@@ -1,3 +1,9 @@
+module;
+
+#ifndef VULKAN_HPP_ENABLE_STD_MODULE
+#include <cstddef>
+#endif
+
 module renderer;
 
 #if defined( __INTELLISENSE__ )

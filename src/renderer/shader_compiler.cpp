@@ -3,6 +3,8 @@ module;
 #include <shaderc/shaderc.hpp>
 
 #if defined( __INTELLISENSE__ ) || !defined( VULKAN_HPP_ENABLE_STD_MODULE )
+#include <chrono>
+#include <filesystem>
 #include <format>
 #include <fstream>
 #endif
