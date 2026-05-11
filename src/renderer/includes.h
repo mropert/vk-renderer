@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 #include <vma/vk_mem_alloc.h>
 
-#if defined( __INTELLISENSE__ ) || !defined( VULKAN_HPP_ENABLE_STD_MODULE )
+#if defined( __INTELLISENSE__ ) || !defined( RENDERER_MODULE )
 #include <algorithm>
 #include <array>
 #include <compare>
@@ -26,9 +26,6 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#endif
-
-#if defined( __INTELLISENSE__ )
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #else

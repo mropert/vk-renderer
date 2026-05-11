@@ -1,5 +1,6 @@
 module;
 
+#define RENDERER_MODULE
 #include <renderer/includes.h>
 
 export module renderer;

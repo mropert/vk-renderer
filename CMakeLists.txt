@@ -37,10 +37,11 @@ target_sources( VulkanHppModule PRIVATE
   FILES ${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm
 )
 target_compile_definitions( VulkanHppModule PUBLIC
-  #VULKAN_HPP_ENABLE_STD_MODULE
   VULKAN_HPP_NO_SETTERS
   VULKAN_HPP_NO_CONSTRUCTORS
 )
+target_compile_definitions( VulkanHppModule PRIVATE VULKAN_HPP_ENABLE_STD_MODULE )
+
 target_link_libraries( VulkanHppModule PUBLIC Vulkan::Vulkan )
 
 add_library(renderer)
