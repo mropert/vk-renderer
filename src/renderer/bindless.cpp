@@ -90,9 +90,10 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 												   .pPoolSizes = pools.data() };
 	_pool = device._device.createDescriptorPool( pool_info );
 
+	const auto layouts = get_layouts();
 	const vk::DescriptorSetAllocateInfo alloc_info { .descriptorPool = _pool,
 													 .descriptorSetCount = SETS_COUNT,
-													 .pSetLayouts = get_layouts().data() };
+													 .pSetLayouts = layouts.data() };
 	auto descs = device._device.allocateDescriptorSets( alloc_info );
 	assert( descs.size() == SETS_COUNT );
 	std::move( begin( descs ), end( descs ), begin( _sets ) );

@@ -7,6 +7,8 @@
 
 namespace renderer
 {
+	class Device;
+
 	namespace raii
 	{
 		class Sampler;
@@ -17,16 +19,16 @@ namespace renderer
 	public:
 		enum class Filter : std::underlying_type_t<vk::Filter>
 		{
-			NEAREST = vk::Filter::eNearest,
-			LINEAR = vk::Filter::eLinear,
-			CUBIC = vk::Filter::eCubicEXT
+			NEAREST = std::to_underlying( vk::Filter::eNearest ),
+			LINEAR = std::to_underlying( vk::Filter::eLinear ),
+			CUBIC = std::to_underlying( vk::Filter::eCubicEXT )
 		};
 
 		enum class ReductionMode : std::underlying_type_t<vk::SamplerReductionMode>
 		{
-			AVERAGE = vk::SamplerReductionMode::eWeightedAverage,
-			MIN = vk::SamplerReductionMode::eMin,
-			MAX = vk::SamplerReductionMode::eMax,
+			AVERAGE = std::to_underlying( vk::SamplerReductionMode::eWeightedAverage ),
+			MIN = std::to_underlying( vk::SamplerReductionMode::eMin ),
+			MAX = std::to_underlying( vk::SamplerReductionMode::eMax ),
 		};
 
 		// private:
@@ -51,7 +53,7 @@ namespace renderer
 			{
 			}
 
-			friend class Device;
+			friend class renderer::Device;
 			vk::raii::Sampler _sampler = nullptr;
 		};
 	}

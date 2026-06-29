@@ -49,7 +49,7 @@ renderer::Device::Device( const char* appname )
 	_instance = { _context, vk_instance_result.value().instance };
 	_debug_util = { _instance, vk_instance_result.value().debug_messenger };
 
-	VkSurfaceKHR surface {};
+	VkSurfaceKHR surface { };
 	if ( !SDL_Vulkan_CreateSurface( _window.get(), *_instance, nullptr, &surface ) )
 	{
 		throw Error( SDL_GetError() );
@@ -57,28 +57,23 @@ renderer::Device::Device( const char* appname )
 
 	_surface = vk::raii::SurfaceKHR( _instance, surface );
 
-	const VkPhysicalDeviceVulkan13Features features13 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-														.synchronization2 = true,
-														.dynamicRendering = true };
+	const VkPhysicalDeviceVulkan13Features req_features13 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+															.synchronization2 = true,
+															.dynamicRendering = true };
 
-	const VkPhysicalDeviceVulkan12Features features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-														.drawIndirectCount = true,
-														.storageBuffer8BitAccess = true,
-														.descriptorIndexing = true,
-														.samplerFilterMinmax = true,
-														.bufferDeviceAddress = true };
+	const VkPhysicalDeviceVulkan12Features req_features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+															.storageBuffer8BitAccess = true,
+															.descriptorIndexing = true,
+															.bufferDeviceAddress = true };
 
-	const VkPhysicalDeviceVulkan11Features features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-														.shaderDrawParameters = true };
-
-	const VkPhysicalDeviceFeatures features10 { .pipelineStatisticsQuery = true };
+	const VkPhysicalDeviceVulkan11Features req_features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+															.shaderDrawParameters = true };
 
 	const auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
 										 .set_minimum_version( 1, 3 )
-										 .set_required_features_13( features13 )
-										 .set_required_features_12( features12 )
-										 .set_required_features_11( features11 )
-										 .set_required_features( features10 )
+										 .set_required_features_13( req_features13 )
+										 .set_required_features_12( req_features12 )
+										 .set_required_features_11( req_features11 )
 										 .set_surface( *_surface )
 										 .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
 										 .select();
@@ -91,7 +86,11 @@ renderer::Device::Device( const char* appname )
 	_physical_device = { _instance, physical_device_ret.value() };
 
 	set_properties();
+	_properties.statistics_support = physical_device_ret->features.pipelineStatisticsQuery;
 	_properties.mesh_shader_support = physical_device_ret->is_extension_present( VK_EXT_MESH_SHADER_EXTENSION_NAME );
+	const auto [ features2, features12 ] = _physical_device.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features>();
+	_properties.draw_indirect_count_support = features12.drawIndirectCount;
+	_properties.minmax_filter_support = features12.samplerFilterMinmax;
 
 	vkb::DeviceBuilder device_builder( physical_device_ret.value() );
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_feature { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
@@ -112,7 +111,7 @@ renderer::Device::Device( const char* appname )
 	_present_queue_family_index = device_ret.value().get_queue_index( vkb::QueueType::present ).value();
 	_gfx_queue = _device.getQueue( _gfx_queue_family_index, 0 );
 
-	VmaAllocator allocator {};
+	VmaAllocator allocator { };
 	const VmaAllocatorCreateInfo allocatorInfo = {
 		.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
 		.physicalDevice = *_physical_device,
@@ -181,9 +180,9 @@ renderer::raii::Texture renderer::Device::create_texture( const Texture::Desc& d
 
 	const VmaAllocationCreateInfo create_info { .usage = VMA_MEMORY_USAGE_AUTO };
 
-	VkImage image {};
-	VmaAllocation allocation {};
-	VmaAllocationInfo allocation_info {};
+	VkImage image { };
+	VmaAllocation allocation { };
+	VmaAllocationInfo allocation_info { };
 	auto ret = vmaCreateImage( _allocator.get(), &info, &create_info, &image, &allocation, &allocation_info );
 	if ( ret )
 	{
@@ -232,9 +231,9 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 		.usage = VMA_MEMORY_USAGE_AUTO
 	};
 
-	VkBuffer buffer {};
-	VmaAllocation allocation {};
-	VmaAllocationInfo allocation_info {};
+	VkBuffer buffer { };
+	VmaAllocation allocation { };
+	VmaAllocationInfo allocation_info { };
 	const auto ret = vmaCreateBuffer( _allocator.get(), &buffer_Info, &vma_alloc_info, &buffer, &allocation, &allocation_info );
 	if ( ret )
 	{
@@ -272,7 +271,7 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 {
 	OPTICK_EVENT();
 
-	vk::ShaderStageFlags used_stages {};
+	vk::ShaderStageFlags used_stages { };
 	for ( const auto& shader : shaders )
 	{
 		used_stages |= static_cast<vk::ShaderStageFlagBits>( shader->get_source().stage );
@@ -358,7 +357,7 @@ renderer::raii::Fence renderer::Device::create_fence( bool signaled )
 {
 	OPTICK_EVENT();
 	return _device.createFence(
-		vk::FenceCreateInfo { .flags = signaled ? vk::FenceCreateFlagBits::eSignaled : vk::FenceCreateFlagBits {} } );
+		vk::FenceCreateInfo { .flags = signaled ? vk::FenceCreateFlagBits::eSignaled : vk::FenceCreateFlagBits { } } );
 }
 
 void renderer::Device::wait_for_fences( std::span<const Fence> fences, uint64_t timeout )

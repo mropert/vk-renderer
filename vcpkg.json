@@ -1,0 +1,15 @@
+{
+  "dependencies": [
+    "vulkan",
+    "vulkan-validationlayers",
+    "vulkan-memory-allocator",
+    "shaderc",
+    {
+      "name": "sdl3",
+      "features": [
+        "vulkan"
+      ]
+    },
+    "tbb"
+  ]
+}

@@ -4,6 +4,10 @@
 
 namespace renderer
 {
+	class CommandBuffer;
+	class Device;
+	class Swapchain;
+
 	namespace raii
 	{
 		class Texture;
@@ -15,36 +19,36 @@ namespace renderer
 	public:
 		enum class Format : std::underlying_type_t<vk::Format>
 		{
-			UNDEFINED = vk::Format::eUndefined,
-			R8G8B8A8_UNORM = vk::Format::eR8G8B8A8Unorm,
-			R8G8B8A8_SRGB = vk::Format::eR8G8B8A8Srgb,
-			R16G16B16A16_SFLOAT = vk::Format::eR16G16B16A16Sfloat,
-			R32_SFLOAT = vk::Format::eR32Sfloat,
-			D32_SFLOAT = vk::Format::eD32Sfloat
+			UNDEFINED = std::to_underlying( vk::Format::eUndefined ),
+			R8G8B8A8_UNORM = std::to_underlying( vk::Format::eR8G8B8A8Unorm ),
+			R8G8B8A8_SRGB = std::to_underlying( vk::Format::eR8G8B8A8Srgb ),
+			R16G16B16A16_SFLOAT = std::to_underlying( vk::Format::eR16G16B16A16Sfloat ),
+			R32_SFLOAT = std::to_underlying( vk::Format::eR32Sfloat ),
+			D32_SFLOAT = std::to_underlying( vk::Format::eD32Sfloat )
 		};
 
 		enum class Layout : std::underlying_type_t<vk::ImageLayout>
 		{
-			UNDEFINED = vk::ImageLayout::eUndefined,
-			GENERAL = vk::ImageLayout::eGeneral,
-			COLOR_ATTACHMENT_OPTIMAL = vk::ImageLayout::eColorAttachmentOptimal,
-			DEPTH_ATTACHMENT_OPTIMAL = vk::ImageLayout::eDepthAttachmentOptimal,
-			DEPTH_READ_ONLY_OPTIMAL = vk::ImageLayout::eDepthReadOnlyOptimal,
-			SHADER_READ_ONLY_OPTIMAL = vk::ImageLayout::eShaderReadOnlyOptimal,
-			TRANSFER_SRC_OPTIMAL = vk::ImageLayout::eTransferSrcOptimal,
-			TRANSFER_DST_OPTIMAL = vk::ImageLayout::eTransferDstOptimal,
-			PRESENT_SRC = vk::ImageLayout::ePresentSrcKHR
+			UNDEFINED = std::to_underlying( vk::ImageLayout::eUndefined ),
+			GENERAL = std::to_underlying( vk::ImageLayout::eGeneral ),
+			COLOR_ATTACHMENT_OPTIMAL = std::to_underlying( vk::ImageLayout::eColorAttachmentOptimal ),
+			DEPTH_ATTACHMENT_OPTIMAL = std::to_underlying( vk::ImageLayout::eDepthAttachmentOptimal ),
+			DEPTH_READ_ONLY_OPTIMAL = std::to_underlying( vk::ImageLayout::eDepthReadOnlyOptimal ),
+			SHADER_READ_ONLY_OPTIMAL = std::to_underlying( vk::ImageLayout::eShaderReadOnlyOptimal ),
+			TRANSFER_SRC_OPTIMAL = std::to_underlying( vk::ImageLayout::eTransferSrcOptimal ),
+			TRANSFER_DST_OPTIMAL = std::to_underlying( vk::ImageLayout::eTransferDstOptimal ),
+			PRESENT_SRC = std::to_underlying( vk::ImageLayout::ePresentSrcKHR )
 		};
 
 		enum class Usage : std::underlying_type_t<vk::ImageUsageFlagBits>
 		{
 			NONE = 0,
-			TRANSFER_SRC = vk::ImageUsageFlagBits::eTransferSrc,
-			TRANSFER_DST = vk::ImageUsageFlagBits::eTransferDst,
-			SAMPLED = vk::ImageUsageFlagBits::eSampled,
-			STORAGE = vk::ImageUsageFlagBits::eStorage,
-			COLOR_ATTACHMENT = vk::ImageUsageFlagBits::eColorAttachment,
-			DEPTH_STENCIL_ATTACHMENT = vk::ImageUsageFlagBits::eDepthStencilAttachment
+			TRANSFER_SRC = std::to_underlying( vk::ImageUsageFlagBits::eTransferSrc ),
+			TRANSFER_DST = std::to_underlying( vk::ImageUsageFlagBits::eTransferDst ),
+			SAMPLED = std::to_underlying( vk::ImageUsageFlagBits::eSampled ),
+			STORAGE = std::to_underlying( vk::ImageUsageFlagBits::eStorage ),
+			COLOR_ATTACHMENT = std::to_underlying( vk::ImageUsageFlagBits::eColorAttachment ),
+			DEPTH_STENCIL_ATTACHMENT = std::to_underlying( vk::ImageUsageFlagBits::eDepthStencilAttachment )
 		};
 
 		struct Desc
@@ -101,8 +105,8 @@ namespace renderer
 	public:
 		enum class Aspect : std::underlying_type_t<vk::ImageAspectFlagBits>
 		{
-			COLOR = vk::ImageAspectFlagBits::eColor,
-			DEPTH = vk::ImageAspectFlagBits::eDepth
+			COLOR = std::to_underlying( vk::ImageAspectFlagBits::eColor ),
+			DEPTH = std::to_underlying( vk::ImageAspectFlagBits::eDepth )
 		};
 
 		// private:
@@ -151,7 +155,7 @@ namespace renderer
 				_allocation = {};
 			}
 
-			friend class Device;
+			friend class renderer::Device;
 			vma::raii::Allocation _allocation;
 		};
 
@@ -167,7 +171,7 @@ namespace renderer
 			{
 			}
 
-			friend class Device;
+			friend class renderer::Device;
 			vk::raii::ImageView _view = nullptr;
 		};
 	}

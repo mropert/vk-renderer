@@ -156,7 +156,7 @@ void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment
 	if ( color_target.clear_value )
 	{
 		color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-		color_attachment.clearValue = { .color = *color_target.clear_value };
+		color_attachment.clearValue = { .color = vk::ClearColorValue( *color_target.clear_value ) };
 	}
 	else
 	{

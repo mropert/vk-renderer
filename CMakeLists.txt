@@ -5,8 +5,16 @@ project(vk-renderer CXX)
 # Toolchain stuff: C++23 and fix some of CMake's nonsense for MSVC
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(/Zi /MP)
-add_link_options(/DEBUG)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	set(NO_MODULES ON)
+	message(WARNING "Apple Clang is a broken compiler with no modules support, consider installing LLVM")
+endif() 
+
+if(MSVC)
+	add_compile_options(/Zi /MP)
+	add_link_options(/DEBUG)
+endif()
 
 find_package(SDL3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
@@ -19,17 +27,23 @@ target_sources(VkBoostrap PRIVATE third_party/vk-bootstrap/v1.4.305/VkBootstrap.
 target_include_directories(VkBoostrap PUBLIC third_party/vk-bootstrap/v1.4.305)
 target_link_libraries(VkBoostrap PUBLIC Vulkan::Vulkan)
 
-add_library( VulkanHppModule )
-target_sources( VulkanHppModule PRIVATE
-  FILE_SET CXX_MODULES
-  BASE_DIRS ${Vulkan_INCLUDE_DIR}
-  FILES ${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm
+if(NO_MODULES)
+	add_library( VulkanHppModule INTERFACE )
+	set( VulkanHppScope INTERFACE )
+else()
+	add_library( VulkanHppModule )
+	set( VulkanHppScope PUBLIC )
+	target_sources( VulkanHppModule PRIVATE
+	  FILE_SET CXX_MODULES
+	  BASE_DIRS ${Vulkan_INCLUDE_DIR}
+	  FILES ${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm
 )
-target_compile_definitions( VulkanHppModule PUBLIC
+endif()
+target_compile_definitions( VulkanHppModule ${VulkanHppScope}
   VULKAN_HPP_NO_SETTERS
   VULKAN_HPP_NO_CONSTRUCTORS
 )
-target_link_libraries( VulkanHppModule PUBLIC Vulkan::Vulkan )
+target_link_libraries( VulkanHppModule ${VulkanHppScope} Vulkan::Vulkan )
 
 add_library(renderer)
 target_sources(renderer

@@ -6,11 +6,11 @@ namespace renderer
 {
 	enum class ShaderStage : std::underlying_type_t<vk::ShaderStageFlagBits>
 	{
-		VERTEX = vk::ShaderStageFlagBits::eVertex,
-		FRAGMENT = vk::ShaderStageFlagBits::eFragment,
-		COMPUTE = vk::ShaderStageFlagBits::eCompute,
-		TASK = vk::ShaderStageFlagBits::eTaskEXT,
-		MESH = vk::ShaderStageFlagBits::eMeshEXT
+		VERTEX = std::to_underlying( vk::ShaderStageFlagBits::eVertex ),
+		FRAGMENT = std::to_underlying( vk::ShaderStageFlagBits::eFragment ),
+		COMPUTE = std::to_underlying( vk::ShaderStageFlagBits::eCompute ),
+		TASK = std::to_underlying( vk::ShaderStageFlagBits::eTaskEXT ),
+		MESH = std::to_underlying( vk::ShaderStageFlagBits::eMeshEXT )
 	};
 
 	inline constexpr ShaderStage operator|( ShaderStage lhs, ShaderStage rhs )

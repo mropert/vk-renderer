@@ -14,21 +14,21 @@ namespace renderer
 	public:
 		enum class PrimitiveTopology : std::underlying_type_t<vk::PrimitiveTopology>
 		{
-			TRIANGLE_LIST = vk::PrimitiveTopology::eTriangleList,
-			TRIANGLE_STRIP = vk::PrimitiveTopology::eTriangleStrip,
+			TRIANGLE_LIST = std::to_underlying( vk::PrimitiveTopology::eTriangleList ),
+			TRIANGLE_STRIP = std::to_underlying( vk::PrimitiveTopology::eTriangleStrip ),
 		};
 
 		enum class CullMode : std::underlying_type_t<vk::CullModeFlagBits>
 		{
-			NONE = vk::CullModeFlagBits::eNone,
-			FRONT = vk::CullModeFlagBits::eFront,
-			BACK = vk::CullModeFlagBits::eBack
+			NONE = std::to_underlying( vk::CullModeFlagBits::eNone ),
+			FRONT = std::to_underlying( vk::CullModeFlagBits::eFront ),
+			BACK = std::to_underlying( vk::CullModeFlagBits::eBack )
 		};
 
 		enum class FrontFace : std::underlying_type_t<vk::FrontFace>
 		{
-			COUNTER_CLOCKWISE = vk::FrontFace::eCounterClockwise,
-			CLOCKWISE = vk::FrontFace::eClockwise
+			COUNTER_CLOCKWISE = std::to_underlying( vk::FrontFace::eCounterClockwise ),
+			CLOCKWISE = std::to_underlying( vk::FrontFace::eClockwise )
 		};
 
 		enum class Type
@@ -99,7 +99,7 @@ namespace renderer
 
 			vk::raii::PipelineLayout _layout = nullptr;
 			vk::raii::Pipeline _pipeline = nullptr;
-			friend class Device;
+			friend class renderer::Device;
 		};
 	}
 

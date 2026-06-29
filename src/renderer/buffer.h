@@ -4,6 +4,7 @@
 
 namespace renderer
 {
+	class Device;
 	using BufferHandle = vk::DeviceAddress;
 
 	class Buffer
@@ -12,13 +13,13 @@ namespace renderer
 		enum class Usage : std::underlying_type_t<vk::BufferUsageFlagBits>
 		{
 			NONE = 0,
-			TRANSFER_SRC = vk::BufferUsageFlagBits::eTransferSrc,
-			TRANSFER_DST = vk::BufferUsageFlagBits::eTransferDst,
-			UNIFORM_BUFFER = vk::BufferUsageFlagBits::eUniformBuffer,
-			STORAGE_BUFFER = vk::BufferUsageFlagBits::eStorageBuffer,
-			INDEX_BUFFER = vk::BufferUsageFlagBits::eIndexBuffer,
-			INDIRECT_BUFFER = vk::BufferUsageFlagBits::eIndirectBuffer,
-			SHADER_DEVICE_ADDRESS = vk::BufferUsageFlagBits::eShaderDeviceAddress,
+			TRANSFER_SRC = std::to_underlying( vk::BufferUsageFlagBits::eTransferSrc ),
+			TRANSFER_DST = std::to_underlying( vk::BufferUsageFlagBits::eTransferDst ),
+			UNIFORM_BUFFER = std::to_underlying( vk::BufferUsageFlagBits::eUniformBuffer ),
+			STORAGE_BUFFER = std::to_underlying( vk::BufferUsageFlagBits::eStorageBuffer ),
+			INDEX_BUFFER = std::to_underlying( vk::BufferUsageFlagBits::eIndexBuffer ),
+			INDIRECT_BUFFER = std::to_underlying( vk::BufferUsageFlagBits::eIndirectBuffer ),
+			SHADER_DEVICE_ADDRESS = std::to_underlying( vk::BufferUsageFlagBits::eShaderDeviceAddress ),
 		};
 
 		Buffer() = default;
@@ -101,11 +102,11 @@ namespace renderer
 
 			void clear()
 			{
-				*static_cast<renderer::Buffer*>( this ) = {};
-				_allocation = {};
+				*static_cast<renderer::Buffer*>( this ) = { };
+				_allocation = { };
 			}
 
-			friend class Device;
+			friend class renderer::Device;
 			vma::raii::Allocation _allocation;
 		};
 	}

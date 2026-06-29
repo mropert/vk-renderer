@@ -15,9 +15,15 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include <version>
+// vcpkg installs under a different path in Windows vs other OSs...
+#ifdef _WIN32
 #include <vma/vk_mem_alloc.h>
+#else
+#include <vk_mem_alloc.h>
+#endif
 
-#if defined( __INTELLISENSE__ )
+#if defined( __INTELLISENSE__ ) || !defined(__cpp_modules) || (__cpp_modules < 201907L)
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #else
