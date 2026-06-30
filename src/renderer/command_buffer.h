@@ -54,6 +54,10 @@ namespace renderer
 		void draw_indexed( uint32_t count, uint32_t instance_count = 1, uint32_t first_index = 0, uint32_t first_instance = 0 );
 		void draw_indexed_indirect( const Buffer& buffer,
 									size_t offset,
+									uint32_t count,
+									uint32_t stride );
+		void draw_indexed_indirect( const Buffer& buffer,
+									size_t offset,
 									const Buffer& count_buffer,
 									size_t count_offset,
 									uint32_t max_draws,

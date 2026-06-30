@@ -253,6 +253,12 @@ void renderer::CommandBuffer::draw_indexed( uint32_t count, uint32_t instance_co
 	_cmd_buffer.drawIndexed( count, instance_count, first_index, 0, first_instance );
 }
 
+void renderer::CommandBuffer::draw_indexed_indirect( const Buffer& buffer, size_t offset, uint32_t count, uint32_t stride )
+{
+	assert( offset < buffer.get_size() );
+	_cmd_buffer.drawIndexedIndirect( buffer.get_buffer(), offset, count, stride );
+}
+
 void renderer::CommandBuffer::draw_indexed_indirect( const Buffer& buffer,
 													 size_t offset,
 													 const Buffer& count_buffer,
