@@ -166,7 +166,7 @@ namespace renderer
 		BindlessHandle<T> add_buffer_entry( const T& value )
 		{
 			const auto offset = BindlessManagerBase::add_buffer_entry( buffer_index<T, buffers_tuple>::value, &value, sizeof( T ) );
-			return { offset / sizeof( T ) };
+			return { offset / static_cast<uint32_t>( sizeof( T ) ) };
 		}
 	};
 }
