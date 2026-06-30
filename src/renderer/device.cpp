@@ -69,14 +69,14 @@ renderer::Device::Device( const char* appname )
 	const VkPhysicalDeviceVulkan11Features req_features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
 															.shaderDrawParameters = true };
 
-	const auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
-										 .set_minimum_version( 1, 3 )
-										 .set_required_features_13( req_features13 )
-										 .set_required_features_12( req_features12 )
-										 .set_required_features_11( req_features11 )
-										 .set_surface( *_surface )
-										 .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
-										 .select();
+	auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
+								   .set_minimum_version( 1, 3 )
+								   .set_required_features_13( req_features13 )
+								   .set_required_features_12( req_features12 )
+								   .set_required_features_11( req_features11 )
+								   .set_surface( *_surface )
+								   .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
+								   .select();
 
 	if ( !physical_device_ret )
 	{
@@ -86,11 +86,16 @@ renderer::Device::Device( const char* appname )
 	_physical_device = { _instance, physical_device_ret.value() };
 
 	set_properties();
-	_properties.statistics_support = physical_device_ret->features.pipelineStatisticsQuery;
 	_properties.mesh_shader_support = physical_device_ret->is_extension_present( VK_EXT_MESH_SHADER_EXTENSION_NAME );
-	const auto [ features2, features12 ] = _physical_device.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features>();
-	_properties.draw_indirect_count_support = features12.drawIndirectCount;
-	_properties.minmax_filter_support = features12.samplerFilterMinmax;
+
+	// XXX: VkBoostrap's API is a bit inefficient at enabling optional features one by one (query device props each time)
+	// We might wanna replace it one day... or make a PR to improve it
+	_properties.statistics_support = physical_device_ret.value().enable_features_if_present(
+		vk::PhysicalDeviceFeatures { .pipelineStatisticsQuery = true } );
+	_properties.draw_indirect_count_support = physical_device_ret.value().enable_extension_features_if_present(
+		vk::PhysicalDeviceVulkan12Features { .drawIndirectCount = true } );
+	_properties.minmax_filter_support = physical_device_ret.value().enable_extension_features_if_present(
+		vk::PhysicalDeviceVulkan12Features { .samplerFilterMinmax = true } );
 
 	vkb::DeviceBuilder device_builder( physical_device_ret.value() );
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_feature { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
@@ -386,15 +391,18 @@ renderer::raii::TimestampQuery renderer::Device::create_timestamp_query( uint32_
 
 void renderer::Device::get_query_results( TimestampQuery query, uint32_t first_index, std::span<uint64_t> results )
 {
-	// Can't seem to find the C++ wrapper, let's use the C API
-	vkGetQueryPoolResults( *_device,
-						   query,
-						   first_index,
-						   static_cast<uint32_t>( results.size() ),
-						   results.size_bytes(),
-						   results.data(),
-						   sizeof( uint64_t ),
-						   VK_QUERY_RESULT_64_BIT );
+	if ( query )
+	{
+		// Can't seem to find the C++ wrapper, let's use the C API
+		vkGetQueryPoolResults( *_device,
+							   query,
+							   first_index,
+							   static_cast<uint32_t>( results.size() ),
+							   results.size_bytes(),
+							   results.data(),
+							   sizeof( uint64_t ),
+							   VK_QUERY_RESULT_64_BIT );
+	}
 }
 
 float renderer::Device::get_timestamp_period() const
@@ -413,15 +421,18 @@ renderer::raii::StatisticsQuery renderer::Device::create_statistics_query()
 
 renderer::Statistics renderer::Device::get_query_results( StatisticsQuery query )
 {
-	Statistics stats;
-	vkGetQueryPoolResults( *_device,
-						   query,
-						   0,
-						   1,
-						   sizeof( uint64_t ),
-						   &stats.clipping_invocations,
-						   sizeof( uint64_t ),
-						   VK_QUERY_RESULT_64_BIT );
+	Statistics stats { };
+	if ( query )
+	{
+		vkGetQueryPoolResults( *_device,
+							   query,
+							   0,
+							   1,
+							   sizeof( uint64_t ),
+							   &stats.clipping_invocations,
+							   sizeof( uint64_t ),
+							   VK_QUERY_RESULT_64_BIT );
+	}
 	return stats;
 }
 

@@ -79,9 +79,9 @@ void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& d
 {
 	const vk::ImageBlit2 blit_region {
 		.srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-		.srcOffsets = { { vk::Offset3D {}, vk::Offset3D( src._desc.extent.width, src._desc.extent.height, 1 ) } },
+		.srcOffsets = { { vk::Offset3D { }, vk::Offset3D( src._desc.extent.width, src._desc.extent.height, 1 ) } },
 		.dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-		.dstOffsets = { { vk::Offset3D {}, vk::Offset3D( dst._desc.extent.width, dst._desc.extent.height, 1 ) } }
+		.dstOffsets = { { vk::Offset3D { }, vk::Offset3D( dst._desc.extent.width, dst._desc.extent.height, 1 ) } }
 	};
 
 	const vk::BlitImageInfo2 blit_info { .srcImage = src._image,
@@ -215,7 +215,7 @@ void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const Bin
 	const auto sets = bindless_manager.get_sets();
 	for ( int i = 0; i < sets.size(); ++i )
 	{
-		_cmd_buffer.bindDescriptorSets( bind_point, pipeline._layout, i, sets[ i ], {} );
+		_cmd_buffer.bindDescriptorSets( bind_point, pipeline._layout, i, sets[ i ], { } );
 	}
 }
 
@@ -289,27 +289,42 @@ void renderer::CommandBuffer::dispatch( uint32_t x, uint32_t y, uint32_t z )
 
 void renderer::CommandBuffer::reset_query( TimestampQuery query, uint32_t first, uint32_t count )
 {
-	_cmd_buffer.resetQueryPool( query, first, count );
+	if ( query )
+	{
+		_cmd_buffer.resetQueryPool( query, first, count );
+	}
 }
 
 void renderer::CommandBuffer::write_timestamp( TimestampQuery query, uint32_t index )
 {
-	_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllGraphics, query, index );
+	if ( query )
+	{
+		_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllGraphics, query, index );
+	}
 }
 
 void renderer::CommandBuffer::reset_query( StatisticsQuery query )
 {
-	_cmd_buffer.resetQueryPool( query, 0, 1 );
+	if ( query )
+	{
+		_cmd_buffer.resetQueryPool( query, 0, 1 );
+	}
 }
 
 void renderer::CommandBuffer::begin_query( StatisticsQuery query )
 {
-	_cmd_buffer.beginQuery( query, 0 );
+	if ( query )
+	{
+		_cmd_buffer.beginQuery( query, 0 );
+	}
 }
 
 void renderer::CommandBuffer::end_query( StatisticsQuery query )
 {
-	_cmd_buffer.endQuery( query, 0 );
+	if ( query )
+	{
+		_cmd_buffer.endQuery( query, 0 );
+	}
 }
 
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )

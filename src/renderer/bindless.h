@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <renderer/buffer.h>
@@ -72,7 +73,7 @@ namespace renderer
 
 		// TODO: allow for user supplied samplers to be added
 		static constexpr BindlessSampler LINEAR_SAMPLER { 0 };
-		static constexpr BindlessSampler LINEAR_MIN_SAMPLER { 1 };
+		static constexpr BindlessSampler LINEAR_MIN_SAMPLER { 1 };	// If supported by device
 
 		std::array<vk::DescriptorSetLayout, SETS_COUNT> get_layouts() const
 		{

@@ -35,7 +35,10 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 {
 	_samplers.reserve( 2 );
 	_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR ) );
-	_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR, Sampler::ReductionMode::MIN ) );
+	if ( device.get_properties().minmax_filter_support )
+	{
+		_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR, Sampler::ReductionMode::MIN ) );
+	}
 
 	_buffers.reserve( buffer_capacities.size() );
 	for ( const auto capacity : buffer_capacities )

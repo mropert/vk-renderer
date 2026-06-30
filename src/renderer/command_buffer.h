@@ -68,9 +68,10 @@ namespace renderer
 
 		void dispatch( uint32_t x, uint32_t y, uint32_t z );
 
+		// Statistic queries
+		// No-op if query objects are null/empty to simplify handling devices without support for statistics (like MoltenVK)
 		void reset_query( TimestampQuery query, uint32_t first, uint32_t count );
 		void write_timestamp( TimestampQuery query, uint32_t index );
-
 		void reset_query( StatisticsQuery query );
 		void begin_query( StatisticsQuery query );
 		void end_query( StatisticsQuery query );
