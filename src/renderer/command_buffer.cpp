@@ -227,10 +227,11 @@ void renderer::CommandBuffer::set_scissor( Extent2D extent )
 
 void renderer::CommandBuffer::set_viewport( Extent2D extent )
 {
+	// As documented in the API we flip Y axis to mirror the most common convention rather than indulging Vulkan's default
 	const vk::Viewport viewport { .x = 0.f,
-								  .y = 0.f,
+								  .y = static_cast<float>( extent.height ),
 								  .width = static_cast<float>( extent.width ),
-								  .height = static_cast<float>( extent.height ),
+								  .height = -static_cast<float>( extent.height ),
 								  .minDepth = 0.f,
 								  .maxDepth = 1.f };
 

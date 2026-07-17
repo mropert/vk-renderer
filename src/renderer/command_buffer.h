@@ -40,6 +40,7 @@ namespace renderer
 		void bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager );
 
 		void set_scissor( Extent2D extent );
+		// Will flip Y axis on the NDC behind the scene to be consistent with every other rendering API in town
 		void set_viewport( Extent2D extent );
 
 		template <typename T>
