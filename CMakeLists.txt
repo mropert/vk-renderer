@@ -12,7 +12,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 endif() 
 
 if(MSVC)
-	add_compile_options(/Zi /MP)
+	add_compile_options(/Zi /MP /W4 /WX)
 	add_link_options(/DEBUG)
 endif()
 

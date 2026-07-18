@@ -69,10 +69,10 @@ renderer::PipelineHandle renderer::PipelineManager::add( Pipeline::Desc desc, st
 								[ &source ]( const auto& shader ) { return shader.code.get_source() == source; } );
 		if ( it == end( _shaders ) )
 		{
-			_shaders.emplace_back( raii::ShaderCode( source, {} ) );
+			_shaders.emplace_back( raii::ShaderCode( source, { } ) );
 			it = end( _shaders ) - 1;
 		}
-		entry.sources.push_back( std::distance( begin( _shaders ), it ) );
+		entry.sources.push_back( static_cast<int>( std::distance( begin( _shaders ), it ) ) );
 	}
 	return handle;
 }
@@ -166,7 +166,7 @@ std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 	}
 	if ( to_rebuild.empty() )
 	{
-		return {};
+		return { };
 	}
 
 	tbb::parallel_for( 0zu,

@@ -35,7 +35,7 @@ void renderer::Swapchain::recreate( Texture::Format format, bool vsync )
 	_images.clear();
 	_swapchain = std::move( new_swapchain );
 	fill_images( format );
-	for ( int i = _submit_semaphores.size(); i < _images.size(); ++i )
+	for ( auto i = _submit_semaphores.size(); i < _images.size(); ++i )
 	{
 		_submit_semaphores.push_back( _device->_device.createSemaphore( vk::SemaphoreCreateInfo() ) );
 	}

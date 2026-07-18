@@ -46,8 +46,8 @@ namespace renderer
 			ShaderCode() = default;
 
 			const uint32_t* get_data() const { return _bytes.data(); }
-			uint32_t get_size() const { return _bytes.size(); }
-			uint32_t get_size_bytes() const { return _bytes.size() * sizeof( uint32_t ); }
+			uint32_t get_size() const { return static_cast<uint32_t>( _bytes.size() ); }
+			uint32_t get_size_bytes() const { return static_cast<uint32_t>( _bytes.size() * sizeof( uint32_t ) ); }
 			const ShaderSource& get_source() const { return _source; }
 
 			auto operator<=>( const ShaderCode& other ) const { return _source <=> other._source; }

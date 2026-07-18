@@ -15,7 +15,7 @@ namespace renderer
 		explicit Swapchain( Device& device, Texture::Format format, bool vsync = true );
 
 		uint32_t get_frame_count() const { return _frame_count; }
-		uint32_t get_image_count() const { return _images.size(); }
+		uint32_t get_image_count() const { return static_cast<uint32_t>( _images.size() ); }
 
 		std::tuple<uint32_t, Texture, TextureView> acquire();
 		void submit( CommandBuffer& buffer );
@@ -35,6 +35,6 @@ namespace renderer
 		std::vector<vk::raii::Semaphore> _acquire_semaphores;
 		std::vector<vk::raii::Semaphore> _submit_semaphores;
 		uint32_t _frame_count = 0;
-		uint32_t _current_image = -1;
+		uint32_t _current_image = static_cast<uint32_t>( -1 );
 	};
 }

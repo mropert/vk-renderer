@@ -75,7 +75,6 @@ renderer::Device::Device( const char* appname )
 								   .set_required_features_12( req_features12 )
 								   .set_required_features_11( req_features11 )
 								   .set_surface( *_surface )
-								   .add_desired_extension( VK_EXT_MESH_SHADER_EXTENSION_NAME )
 								   .select();
 
 	if ( !physical_device_ret )
@@ -86,7 +85,7 @@ renderer::Device::Device( const char* appname )
 	_physical_device = { _instance, physical_device_ret.value() };
 
 	set_properties();
-	_properties.mesh_shader_support = physical_device_ret->is_extension_present( VK_EXT_MESH_SHADER_EXTENSION_NAME );
+	_properties.mesh_shader_support = physical_device_ret->enable_extension_if_present( VK_EXT_MESH_SHADER_EXTENSION_NAME );
 
 	// XXX: VkBoostrap's API is a bit inefficient at enabling optional features one by one (query device props each time)
 	// We might wanna replace it one day... or make a PR to improve it
@@ -261,7 +260,8 @@ vk::raii::PipelineLayout renderer::Device::create_pipeline_layout( vk::ShaderSta
 {
 	const vk::PushConstantRange constants { .stageFlags = used_stages, .size = push_constants_size };
 	const auto desc_layouts = bindless_manager.get_layouts();
-	vk::PipelineLayoutCreateInfo layout_create_info { .setLayoutCount = desc_layouts.size(), .pSetLayouts = desc_layouts.data() };
+	vk::PipelineLayoutCreateInfo layout_create_info { .setLayoutCount = static_cast<uint32_t>( desc_layouts.size() ),
+													  .pSetLayouts = desc_layouts.data() };
 	if ( constants.size > 0 )
 	{
 		layout_create_info.pushConstantRangeCount = 1;
@@ -309,7 +309,8 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 														.depthAttachmentFormat = static_cast<vk::Format>( desc.depth_format ) };
 
 	const std::array<vk::DynamicState, 2> state { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
-	const vk::PipelineDynamicStateCreateInfo dynamic_state { .dynamicStateCount = state.size(), .pDynamicStates = state.data() };
+	const vk::PipelineDynamicStateCreateInfo dynamic_state { .dynamicStateCount = static_cast<uint32_t>( state.size() ),
+															 .pDynamicStates = state.data() };
 
 	std::vector<vk::raii::ShaderModule> modules;
 	std::vector<vk::PipelineShaderStageCreateInfo> shader_stages;

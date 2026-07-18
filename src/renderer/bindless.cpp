@@ -89,7 +89,7 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 	const vk::DescriptorPoolCreateInfo pool_info { .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 												   .maxSets = static_cast<uint32_t>( ( MAX_TEXTURES * 2 ) + MAX_SAMPLERS
 																					 + _buffers.size() ),
-												   .poolSizeCount = pools.size(),
+												   .poolSizeCount = static_cast<uint32_t>( pools.size() ),
 												   .pPoolSizes = pools.data() };
 	_pool = device._device.createDescriptorPool( pool_info );
 
@@ -127,7 +127,7 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 							.descriptorType = vk::DescriptorType::eStorageBuffer,
 							.pBufferInfo = &buffers_info[ i ] } );
 	}
-	device._device.updateDescriptorSets( writes, {} );
+	device._device.updateDescriptorSets( writes, { } );
 }
 
 renderer::BindlessTexture renderer::BindlessManagerBase::add_texture( raii::Texture&& tex, bool individual_mips )
@@ -196,7 +196,7 @@ void renderer::BindlessManagerBase::add_texture_bindings( const Texture::Usage u
 		++count;
 	}
 
-	_device->_device.updateDescriptorSets( std::span( writes.data(), count ), {} );
+	_device->_device.updateDescriptorSets( std::span( writes.data(), count ), { } );
 }
 
 uint32_t renderer::BindlessManagerBase::add_buffer_entry( uint32_t buffer_index, const void* data, uint32_t size )

@@ -11,11 +11,13 @@ namespace renderer
 {
 	struct BindlessTexture
 	{
+		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
+
 		struct Handles
 		{
 			TextureView view;
-			uint32_t texture_index = static_cast<uint32_t>( -1 );
-			uint32_t storage_index = static_cast<uint32_t>( -1 );
+			uint32_t texture_index = UNSET;
+			uint32_t storage_index = UNSET;
 		};
 
 		Texture texture;
@@ -25,12 +27,14 @@ namespace renderer
 
 	struct BindlessSampler
 	{
+		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
 		uint32_t index;
 	};
 
 	template <typename T>
 	struct BindlessHandle
 	{
+		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
 		uint32_t index;
 	};
 
