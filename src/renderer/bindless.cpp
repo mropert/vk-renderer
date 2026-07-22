@@ -5,6 +5,17 @@
 #include <cassert>
 #include <renderer/device.h>
 
+
+namespace renderer
+{
+	// Sanity checks to ensure our handles can be used directly in GPU buffers
+	struct TestResource;
+	static_assert( sizeof( BindlessHandle<TestResource> ) == sizeof( uint32_t ) );
+	static_assert( std::bit_cast<uint32_t>( BindlessHandle<TestResource> { } ) == BindlessHandle<TestResource>::UNSET );
+	static_assert( std::bit_cast<uint32_t>( BindlessHandle<TestResource> { 0 } ) == 0u );
+	static_assert( std::bit_cast<uint32_t>( BindlessHandle<TestResource> { 42 } ) == 42u );
+}
+
 renderer::BindlessManagerBase::BindlessBuffer::BindlessBuffer( Device& device, uint32_t capacity )
 {
 	// Use uncached memory mapped device memory if possible
@@ -173,11 +184,11 @@ void renderer::BindlessManagerBase::add_texture_bindings( const Texture::Usage u
 
 	if ( ( usage & Texture::Usage::SAMPLED ) == Texture::Usage::SAMPLED )
 	{
-		handles.texture_index = _read_only_textures++;
+		handles.sampled_texture.index = _read_only_textures++;
 		infos[ count ] = { .imageView = handles.view._view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
 		writes[ count ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
 							.dstBinding = std::to_underlying( TextureBindings::TEXTURES ),
-							.dstArrayElement = handles.texture_index,
+							.dstArrayElement = handles.sampled_texture.index,
 							.descriptorCount = 1,
 							.descriptorType = vk::DescriptorType::eSampledImage,
 							.pImageInfo = &infos[ count ] };
@@ -185,11 +196,11 @@ void renderer::BindlessManagerBase::add_texture_bindings( const Texture::Usage u
 	}
 	if ( ( usage & Texture::Usage::STORAGE ) == Texture::Usage::STORAGE )
 	{
-		handles.storage_index = _read_write_textures++;
+		handles.storage_texture.index = _read_write_textures++;
 		infos[ count ] = { .imageView = handles.view._view, .imageLayout = vk::ImageLayout::eGeneral };
 		writes[ count ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
 							.dstBinding = std::to_underlying( TextureBindings::IMAGES ),
-							.dstArrayElement = handles.storage_index,
+							.dstArrayElement = handles.storage_texture.index,
 							.descriptorCount = 1,
 							.descriptorType = vk::DescriptorType::eStorageImage,
 							.pImageInfo = &infos[ count ] };

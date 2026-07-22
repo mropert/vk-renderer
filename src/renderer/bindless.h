@@ -9,15 +9,27 @@
 
 namespace renderer
 {
-	struct BindlessTexture
+	// Detail types, only exist to distinguish their handles
+	struct SampledTextureView;
+	struct StorageTextureView;
+
+	template <typename T>
+	struct BindlessHandle
 	{
 		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
+		uint32_t index = UNSET;
+	};
 
+	using BindlessSampledTexture = BindlessHandle<SampledTextureView>;
+	using BindlessStorageTexture = BindlessHandle<StorageTextureView>;
+
+	struct BindlessTexture
+	{
 		struct Handles
 		{
 			TextureView view;
-			uint32_t texture_index = UNSET;
-			uint32_t storage_index = UNSET;
+			BindlessSampledTexture sampled_texture;
+			BindlessStorageTexture storage_texture;
 		};
 
 		Texture texture;
@@ -25,18 +37,7 @@ namespace renderer
 		std::vector<Handles> mips;
 	};
 
-	struct BindlessSampler
-	{
-		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
-		uint32_t index;
-	};
-
-	template <typename T>
-	struct BindlessHandle
-	{
-		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
-		uint32_t index;
-	};
+	using BindlessSampler = BindlessHandle<Sampler>;
 
 	class Device;
 
@@ -77,7 +78,7 @@ namespace renderer
 
 		// TODO: allow for user supplied samplers to be added
 		static constexpr BindlessSampler LINEAR_SAMPLER { 0 };
-		static constexpr BindlessSampler LINEAR_MIN_SAMPLER { 1 };	// If supported by device
+		static constexpr BindlessSampler LINEAR_MIN_SAMPLER { 1 }; // If supported by device
 
 		std::array<vk::DescriptorSetLayout, SETS_COUNT> get_layouts() const
 		{
