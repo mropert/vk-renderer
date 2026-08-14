@@ -21,7 +21,7 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsy
 		_frame_fences.push_back( device.create_fence( true ) );
 		_acquire_semaphores.push_back( device._device.createSemaphore( vk::SemaphoreCreateInfo() ) );
 	}
-	for ( int i = 0; i < _images.size(); ++i )
+	for ( size_t i = 0; i < _images.size(); ++i )
 	{
 		_submit_semaphores.push_back( device._device.createSemaphore( vk::SemaphoreCreateInfo() ) );
 	}

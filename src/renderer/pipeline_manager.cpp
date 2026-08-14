@@ -19,14 +19,13 @@ namespace
 
 	// XXX: TBB seems to creates a different scheduler/arena for jthreads
 	// We discovered this because we had to set a different observer instance to see the TBB workers used by the bindless manager
-
 	struct tbb_observer final : public tbb::task_scheduler_observer
 	{
 		void on_scheduler_entry( bool is_worker ) override
 		{
 			if ( is_worker )
 			{
-				static thread_local OPTICK_THREAD( "TBB Worker" );
+				OPTICK_THREAD_STATIC( "TBB Worker" );
 			}
 		}
 	};
@@ -141,7 +140,7 @@ std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 	OPTICK_EVENT();
 	struct RebuildRequest
 	{
-		int index;
+		size_t index;
 		ShaderSource source;
 		std::filesystem::file_time_type last_write;
 		std::expected<raii::ShaderCode, Error> result;
@@ -154,7 +153,7 @@ std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 		// FIXME: we do not detect writes to includes, only the top level source file
 		// Also, instead of polling the filesystem every 1s we should use a filewatcher,
 		// but std::filesystem doesn't provide one and this isn't worth writing our own at the moment.
-		for ( int i = 0; i < _shaders.size(); ++i )
+		for ( size_t i = 0; i < _shaders.size(); ++i )
 		{
 			const auto& base_dir = _compiler.get_base_directory();
 			const auto timestamp = std::filesystem::last_write_time( base_dir / _shaders[ i ].code.get_source().path );
@@ -208,7 +207,7 @@ void renderer::PipelineManager::rebuild_job()
 	std::unique_lock lock( _mtx );
 	for ( PipelineHandle i = 0; i < _items.size(); ++i )
 	{
-		int available = 0;
+		size_t available = 0;
 		int rebuilt = 0;
 		for ( const auto source : _items[ i ].sources )
 		{

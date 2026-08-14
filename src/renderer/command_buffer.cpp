@@ -213,7 +213,7 @@ void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const Bin
 																		   : vk::PipelineBindPoint::eGraphics;
 	_cmd_buffer.bindPipeline( bind_point, pipeline._pipeline );
 	const auto sets = bindless_manager.get_sets();
-	for ( int i = 0; i < sets.size(); ++i )
+	for ( uint32_t i = 0; i < sets.size(); ++i )
 	{
 		_cmd_buffer.bindDescriptorSets( bind_point, pipeline._layout, i, sets[ i ], { } );
 	}

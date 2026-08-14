@@ -65,7 +65,7 @@ namespace renderer
 		// Recursive mtx has higher perf on windows, blame MSVC runtime
 		std::recursive_mutex _mtx;
 		std::condition_variable_any _ready_signal;
-		int _available_pipelines = 0;
+		size_t _available_pipelines = 0;
 		std::vector<Error> _pending_errors;
 		std::unordered_map<PipelineHandle, MakePipelineResult> _updated_items;
 		std::jthread _rebuild_thread;

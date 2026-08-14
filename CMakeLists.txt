@@ -14,6 +14,8 @@ endif()
 if(MSVC)
 	add_compile_options(/Zi /MP /W4 /WX)
 	add_link_options(/DEBUG)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	add_compile_options(-W -Wall -Werror)
 endif()
 
 find_package(SDL3 CONFIG REQUIRED)

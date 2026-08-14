@@ -128,6 +128,8 @@ namespace renderer
 		{
 		}
 
+		VkResult get_vulkan_error() const { return _error; }
+
 	private:
 		VkResult _error = VK_SUCCESS;
 	};
