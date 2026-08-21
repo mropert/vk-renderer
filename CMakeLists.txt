@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.31)
 
+option(USE_TRACY "Enable Tracy profiler instrumentation" OFF)
+if(USE_TRACY)
+	list(APPEND VCPKG_MANIFEST_FEATURES "tracy")
+endif()
+
 project(vk-renderer CXX)
 
 # Toolchain stuff: C++23 and fix some of CMake's nonsense for MSVC
@@ -23,6 +28,10 @@ find_package(TBB CONFIG REQUIRED)
 find_package(unofficial-shaderc CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+
+if(USE_TRACY)
+	find_package(Tracy CONFIG REQUIRED)
+endif()
 
 add_library(VkBoostrap STATIC)
 target_sources(VkBoostrap PRIVATE third_party/vk-bootstrap/v1.4.305/VkBootstrap.cpp)
@@ -72,6 +81,11 @@ if( TARGET Optick )
 	target_link_libraries(renderer PRIVATE Optick)
 endif()
 
+if( USE_TRACY )
+	target_compile_definitions(renderer PRIVATE USE_TRACY)
+	target_link_libraries(renderer PRIVATE Tracy::TracyClient)
+endif()
+
 add_executable(clear_color)
 target_sources(clear_color PRIVATE examples/clear_color.cpp)
 target_link_libraries(clear_color PRIVATE renderer SDL3::SDL3)
@@ -79,6 +93,11 @@ target_link_libraries(clear_color PRIVATE renderer SDL3::SDL3)
 if( TARGET Optick )
 	target_compile_definitions(clear_color PRIVATE USE_OPTICK)
 	target_link_libraries(clear_color PRIVATE Optick)
+endif()
+
+if( USE_TRACY )
+	target_compile_definitions(clear_color PRIVATE USE_TRACY)
+	target_link_libraries(clear_color PRIVATE Tracy::TracyClient)
 endif()
 
 set_target_properties(clear_color PROPERTIES

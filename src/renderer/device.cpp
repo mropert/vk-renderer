@@ -11,7 +11,7 @@
 
 renderer::Device::Device( const char* appname )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 
 	if ( !SDL_Init( SDL_INIT_VIDEO ) )
 	{
@@ -171,7 +171,7 @@ void renderer::Device::release_command_buffer( CommandBuffer* buffer )
 
 renderer::raii::Texture renderer::Device::create_texture( const Texture::Desc& desc )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	const VkImageCreateInfo info { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 								   .imageType = VK_IMAGE_TYPE_2D,
 								   .format = static_cast<VkFormat>( desc.format ),
@@ -215,7 +215,7 @@ renderer::raii::TextureView renderer::Device::create_texture_view( const Texture
 
 renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter, Sampler::ReductionMode mode )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	const vk::SamplerReductionModeCreateInfo reduction_info { .reductionMode = static_cast<vk::SamplerReductionMode>( mode ) };
 	auto sampler = _device.createSampler( vk::SamplerCreateInfo { .pNext = &reduction_info,
 																  .magFilter = static_cast<vk::Filter>( filter ),
@@ -226,7 +226,7 @@ renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter
 
 renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std::size_t size, bool upload )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	const VkBufferCreateInfo buffer_Info { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 										   .size = size,
 										   .usage = static_cast<VkBufferUsageFlags>( usage ) };
@@ -274,7 +274,7 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 																	 std::span<const raii::ShaderCode*> shaders,
 																	 const BindlessManagerBase& bindless_manager )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 
 	vk::ShaderStageFlags used_stages { };
 	for ( const auto& shader : shaders )
@@ -361,14 +361,14 @@ renderer::raii::Pipeline renderer::Device::create_compute_pipeline( const Pipeli
 
 renderer::raii::Fence renderer::Device::create_fence( bool signaled )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	return _device.createFence(
 		vk::FenceCreateInfo { .flags = signaled ? vk::FenceCreateFlagBits::eSignaled : vk::FenceCreateFlagBits { } } );
 }
 
 void renderer::Device::wait_for_fences( std::span<const Fence> fences, uint64_t timeout )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	// We can safely ignore the return value, VulkanHpp already throws an exception on failure
 	(void)_device.waitForFences( fences, true, timeout );
 }
@@ -380,7 +380,7 @@ void renderer::Device::reset_fences( std::span<const Fence> fences )
 
 void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	const vk::CommandBufferSubmitInfo info { .commandBuffer = buffer._cmd_buffer };
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
 }
@@ -460,7 +460,7 @@ renderer::Device::Internals renderer::Device::get_internals() const
 
 void renderer::Device::notify_present()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	_delete_index = ( _delete_index + 1 ) % MAX_FRAMES_IN_FLIGHT;
 	_delete_queue[ _delete_index ].clear();
 }

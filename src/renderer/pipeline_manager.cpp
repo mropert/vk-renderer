@@ -25,7 +25,7 @@ namespace
 		{
 			if ( is_worker )
 			{
-				OPTICK_THREAD_STATIC( "TBB Worker" );
+				PROFILER_THREAD_STATIC( "TBB Worker" );
 			}
 		}
 	};
@@ -38,7 +38,7 @@ renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::pat
 	, _rebuild_thread(
 		  [ & ]( std::stop_token tok )
 		  {
-			  OPTICK_THREAD( "pipeline_rebuild" );
+			  PROFILER_THREAD( "pipeline_rebuild" );
 			  tbb_observer observer;
 			  observer.observe();
 			  while ( !tok.stop_requested() )
@@ -78,7 +78,7 @@ renderer::PipelineHandle renderer::PipelineManager::add( Pipeline::Desc desc, st
 
 void renderer::PipelineManager::update()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	// FIXME: to avoid blocking on a rendering thread we should probably do a try_lock() here
 	// and bail if it fails to acquire it (and try again next frame).
 	// But so far this hasn't been an issue.
@@ -102,7 +102,7 @@ renderer::Pipeline renderer::PipelineManager::get( PipelineHandle pipeline ) con
 
 void renderer::PipelineManager::wait_ready()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	std::unique_lock lock( _mtx );
 	while ( _pending_errors.empty() && _available_pipelines != _items.size() )
 	{
@@ -117,7 +117,7 @@ void renderer::PipelineManager::wait_ready()
 renderer::PipelineManager::MakePipelineResult renderer::PipelineManager::make( const Pipeline::Desc& desc,
 																			   std::span<const raii::ShaderCode*> shaders ) const
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	try
 	{
 		if ( shaders.size() == 1 && shaders[ 0 ]->get_source().stage == ShaderStage::COMPUTE )
@@ -137,7 +137,7 @@ renderer::PipelineManager::MakePipelineResult renderer::PipelineManager::make( c
 
 std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	struct RebuildRequest
 	{
 		size_t index;
@@ -200,7 +200,7 @@ std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 
 void renderer::PipelineManager::rebuild_job()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	const auto rebuilt_shaders = rebuild_outdated_shaders();
 	std::vector<const raii::ShaderCode*> shaders;
 

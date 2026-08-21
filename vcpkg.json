@@ -11,5 +11,11 @@
       ]
     },
     "tbb"
-  ]
+  ],
+  "features": {
+    "tracy": {
+      "description": "Enable Tracy profiler support",
+      "dependencies": [ "tracy" ]
+    }
+  }
 }

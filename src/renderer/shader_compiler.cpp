@@ -114,7 +114,7 @@ std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler:
 std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderSource source,
 																						  std::string_view source_code ) const
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	shaderc::CompileOptions options;
 	// XXX: Technically we are using Vulkan 1.3 but the compiler emits incorrect LocalSizeId usage with mesh shaders
 	options.SetTargetEnvironment( shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2 );

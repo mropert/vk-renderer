@@ -53,6 +53,6 @@ int main()
 
 // Also shutdown optick if enabled (no API way to unregister a GPU :/)
 #ifdef USE_OPTICK
-	OPTICK_SHUTDOWN();
+	PROFILER_SHUTDOWN();
 #endif
 }

@@ -10,7 +10,7 @@
 renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsync )
 	: _device( &device )
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 
 	_swapchain = create( device, format, vsync, nullptr );
 
@@ -85,7 +85,7 @@ void renderer::Swapchain::fill_images( Texture::Format format )
 
 std::tuple<uint32_t, renderer::Texture, renderer::TextureView> renderer::Swapchain::acquire()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 	const auto frame_index = _frame_count % MAX_FRAMES_IN_FLIGHT;
 	if ( const auto result = _device->_device.waitForFences( *_frame_fences[ frame_index ], vk::True, UINT64_MAX );
 		 result != vk::Result::eSuccess )
@@ -125,7 +125,7 @@ void renderer::Swapchain::submit( CommandBuffer& buffer )
 
 void renderer::Swapchain::present()
 {
-	OPTICK_EVENT();
+	PROFILER_SCOPE();
 #ifdef USE_OPTICK
 	::Optick::GpuFlip( static_cast<VkSwapchainKHR>( *_swapchain ) );
 #endif
