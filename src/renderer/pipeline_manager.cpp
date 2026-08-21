@@ -135,7 +135,7 @@ renderer::PipelineManager::MakePipelineResult renderer::PipelineManager::make( c
 	}
 }
 
-std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
+std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 {
 	PROFILER_SCOPE();
 	struct RebuildRequest
@@ -173,7 +173,7 @@ std::vector<int> renderer::PipelineManager::rebuild_outdated_shaders()
 					   [ & ]( size_t index )
 					   { to_rebuild[ index ].result = compile_shader( _compiler, std::move( to_rebuild[ index ].source ) ); } );
 
-	std::vector<int> rebuilt;
+	std::vector<size_t> rebuilt;
 	rebuilt.reserve( to_rebuild.size() );
 	std::unique_lock lock( _mtx );
 	for ( auto& item : to_rebuild )

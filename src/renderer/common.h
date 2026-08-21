@@ -23,11 +23,25 @@
 #include <vk_mem_alloc.h>
 #endif
 
-#if defined( __INTELLISENSE__ ) || !defined(__cpp_modules) || (__cpp_modules < 201907L)
+#if defined( __INTELLISENSE__ ) || !defined( __cpp_modules ) || ( __cpp_modules < 201907L )
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #else
-import vulkan_hpp;
+// Also include every other bit of the STL that we use or else it will fail for client who haven't migrated to `import std`.
+// This is horrible but the whole module design is based on virality...
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <memory_resource>
+#include <mutex>
+#include <numeric>
+#include <random>
+#include <shared_mutex>
+#include <unordered_map>
+#include <variant>
+
+import vulkan;
 #endif
 
 namespace sdl::raii

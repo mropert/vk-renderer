@@ -54,7 +54,7 @@ namespace renderer
 
 	private:
 		MakePipelineResult make( const Pipeline::Desc& desc, std::span<const raii::ShaderCode*> shaders ) const;
-		std::vector<int> rebuild_outdated_shaders();
+		std::vector<size_t> rebuild_outdated_shaders();
 		void rebuild_job();
 
 		Device* _device;

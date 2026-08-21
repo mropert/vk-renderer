@@ -1,7 +1,6 @@
 #include "swapchain.h"
 
 #include <VkBootstrap.h>
-#include <ranges>
 #include <renderer/command_buffer.h>
 #include <renderer/details/profiler.h>
 #include <renderer/device.h>
