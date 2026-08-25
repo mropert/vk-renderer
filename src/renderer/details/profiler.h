@@ -21,6 +21,7 @@
 
 #ifdef USE_TRACY
 #include <optional>
+#include <source_location>
 #include <tracy/Tracy.hpp>
 
 // Magic coloring for Tracy to give a similar impression to Optick's visual style
