@@ -154,7 +154,7 @@ namespace renderer
 		static constexpr std::array<uint32_t, buffer_count> calc_capacities( std::span<const uint32_t, buffer_count> caps )
 		{
 			auto capacities = buffer_item_size;
-			for ( int i = 0; i < buffer_count; ++i )
+			for ( size_t i = 0; i < buffer_count; ++i )
 			{
 				capacities[ i ] *= caps[ i ];
 			}
