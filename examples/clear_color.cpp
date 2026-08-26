@@ -29,17 +29,17 @@ int main()
 
 		command_buffer->reset();
 		command_buffer->begin();
-		command_buffer->transition_texture( swapchain_image,
-											renderer::Texture::Layout::UNDEFINED,
-											renderer::Texture::Layout::COLOR_ATTACHMENT_OPTIMAL );
+		command_buffer->texture_barrier( swapchain_image,
+											renderer::ResourceState::UNDEFINED,
+											renderer::ResourceState::COLOR_ATTACHMENT );
 		command_buffer->begin_rendering(
 			device.get_extent(),
 			renderer::RenderAttachment { .target = swapchain_image_view, .clear_value = { { 1.f, 0.f, 1.f, 1.f } } },
 			renderer::RenderAttachment {} );
 		command_buffer->end_rendering();
-		command_buffer->transition_texture( swapchain_image,
-											renderer::Texture::Layout::COLOR_ATTACHMENT_OPTIMAL,
-											renderer::Texture::Layout::PRESENT_SRC );
+		command_buffer->texture_barrier( swapchain_image,
+											renderer::ResourceState::COLOR_ATTACHMENT,
+											renderer::ResourceState::PRESENT );
 		command_buffer->end();
 
 		swapchain.submit( *command_buffer );

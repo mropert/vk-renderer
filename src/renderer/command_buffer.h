@@ -12,6 +12,28 @@ namespace renderer
 	class Pipeline;
 	class TextureView;
 
+	// Simplified stage + access fold for most common barriers, inspired by D3D12_RESOURCE_STATE
+	enum class ResourceState
+	{
+		UNDEFINED,
+		INDIRECT_ARGUMENT,
+		INDEX_READ,
+		VERTEX_SHADER_READ,	// Includes geometry and mesh shaders
+		FRAGMENT_SHADER_READ,
+		COMPUTE_SHADER_READ,
+		SHADER_READ,
+		STORAGE_READ,
+		ANY_BUFFER_READ, // Any buffer read from shaders, indices and indirect
+		STORAGE_WRITE,
+		STORAGE_READ_WRITE,
+		COLOR_ATTACHMENT,
+		DEPTH_ATTACHMENT,
+		DEPTH_READ,
+		TRANSFER_SRC,
+		TRANSFER_DST,
+		PRESENT
+	};
+
 	struct RenderAttachment
 	{
 		TextureView target;
@@ -26,15 +48,17 @@ namespace renderer
 		void end();
 		void reset();
 
-		void transition_texture( const Texture& tex, Texture::Layout src_layout, Texture::Layout dst_layout, int mip_level = -1 );
+		void texture_barrier( const Texture& tex, ResourceState src, ResourceState dst, int mip_level = -1 );
 		void blit_texture( const Texture& src, const Texture& dst );
 
 		void copy_buffer( const Buffer& src, std::size_t offset, std::size_t size, const Buffer& dest, std::size_t dest_offset = 0 );
 		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex );
 		void fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value );
-		void buffer_barrier( const Buffer& buffer );
+		void buffer_barrier( const Buffer& buffer, ResourceState src, ResourceState dst );
 
-		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target = {} );
+		void memory_barrier( ResourceState src, ResourceState dst );
+
+		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target = { } );
 		void end_rendering();
 
 		void bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager );
@@ -53,10 +77,7 @@ namespace renderer
 
 		void draw( uint32_t count );
 		void draw_indexed( uint32_t count, uint32_t instance_count = 1, uint32_t first_index = 0, uint32_t first_instance = 0 );
-		void draw_indexed_indirect( const Buffer& buffer,
-									size_t offset,
-									uint32_t count,
-									uint32_t stride );
+		void draw_indexed_indirect( const Buffer& buffer, size_t offset, uint32_t count, uint32_t stride );
 		void draw_indexed_indirect( const Buffer& buffer,
 									size_t offset,
 									const Buffer& count_buffer,
@@ -90,6 +111,7 @@ namespace renderer
 		{
 		}
 
+		// Lower level barriers aren't exposed for now, until we find a use case for them
 		void texture_barrier( const Texture& tex,
 							  Texture::Layout src_layout,
 							  Texture::Layout dst_layout,
