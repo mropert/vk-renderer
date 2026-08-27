@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <utility>
 #include <renderer/common.h>
 #include <renderer/texture.h>
 
@@ -12,19 +13,20 @@ namespace renderer
 	class Swapchain
 	{
 	public:
-		explicit Swapchain( Device& device, Texture::Format format, bool vsync = true );
+		explicit Swapchain( Device& device, Texture::Format desired_format, bool vsync = true );
 
 		uint32_t get_frame_count() const { return _frame_count; }
 		uint32_t get_image_count() const { return static_cast<uint32_t>( _images.size() ); }
+		Texture::Format get_format() const { return _format; }
 
 		std::tuple<uint32_t, Texture, TextureView> acquire();
 		void submit( CommandBuffer& buffer );
 		void present();
 
-		void recreate( Texture::Format format, bool vsync = true );
+		void recreate( Texture::Format desired_format, bool vsync = true );
 
 	private:
-		static vk::raii::SwapchainKHR create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain );
+		static std::pair<vk::raii::SwapchainKHR, vk::Format> create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain );
 		void fill_images( Texture::Format format );
 
 		Device* _device;
@@ -34,6 +36,7 @@ namespace renderer
 		std::vector<raii::Fence> _frame_fences;
 		std::vector<vk::raii::Semaphore> _acquire_semaphores;
 		std::vector<vk::raii::Semaphore> _submit_semaphores;
+		Texture::Format _format;
 		uint32_t _frame_count = 0;
 		uint32_t _current_image = static_cast<uint32_t>( -1 );
 	};

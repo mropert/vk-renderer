@@ -6,14 +6,16 @@
 #include <renderer/device.h>
 #include <renderer/texture.h>
 
-renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsync )
+renderer::Swapchain::Swapchain( Device& device, Texture::Format desired_format, bool vsync )
 	: _device( &device )
 {
 	PROFILER_SCOPE();
 
-	_swapchain = create( device, format, vsync, nullptr );
+	auto [ swapchain, format ] = create( device, desired_format, vsync, nullptr );
+	_swapchain = std::move( swapchain );
+	_format = static_cast<Texture::Format>( std::to_underlying( format ) );
 
-	fill_images( format );
+	fill_images( _format );
 
 	for ( int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
 	{
@@ -26,21 +28,24 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsy
 	}
 }
 
-void renderer::Swapchain::recreate( Texture::Format format, bool vsync )
+void renderer::Swapchain::recreate( Texture::Format desired_format, bool vsync )
 {
-	auto new_swapchain = create( *_device, format, vsync, *_swapchain );
+	auto [ new_swapchain, format ] = create( *_device, desired_format, vsync, *_swapchain );
+
 	_device->wait_idle();
 	_image_views.clear();
 	_images.clear();
 	_swapchain = std::move( new_swapchain );
-	fill_images( format );
+	_format = static_cast<Texture::Format>( std::to_underlying( format ) );
+	fill_images( _format );
 	for ( auto i = _submit_semaphores.size(); i < _images.size(); ++i )
 	{
 		_submit_semaphores.push_back( _device->_device.createSemaphore( vk::SemaphoreCreateInfo() ) );
 	}
 }
 
-vk::raii::SwapchainKHR renderer::Swapchain::create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain )
+std::pair<vk::raii::SwapchainKHR, vk::Format>
+renderer::Swapchain::create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain )
 {
 	vkb::SwapchainBuilder builder( *device._physical_device,
 								   *device._device,
@@ -67,7 +72,7 @@ vk::raii::SwapchainKHR renderer::Swapchain::create( Device& device, Texture::For
 	{
 		throw Error( swapchain_ret.error(), swapchain_ret.vk_result() );
 	}
-	return { device._device, swapchain_ret.value() };
+	return { vk::raii::SwapchainKHR { device._device, swapchain_ret.value() }, vk::Format( swapchain_ret->image_format ) };
 }
 
 void renderer::Swapchain::fill_images( Texture::Format format )
