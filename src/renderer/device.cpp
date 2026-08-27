@@ -291,7 +291,8 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 																.cullMode = static_cast<vk::CullModeFlagBits>( desc.cull_mode ),
 																.frontFace = static_cast<vk::FrontFace>( desc.front_face ),
 																.lineWidth = 1.f };
-	const vk::PipelineMultisampleStateCreateInfo multisampling { .rasterizationSamples = vk::SampleCountFlagBits::e4,
+	const vk::PipelineMultisampleStateCreateInfo multisampling { .rasterizationSamples = static_cast<vk::SampleCountFlagBits>(
+																	 desc.sample_count ),
 																 .minSampleShading = 1.0f };
 	const vk::PipelineDepthStencilStateCreateInfo depth_stencil = { .depthTestEnable = true,
 																	.depthWriteEnable = true,
