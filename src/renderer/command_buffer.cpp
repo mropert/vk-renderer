@@ -132,6 +132,8 @@ namespace renderer
 			case ResourceState::PRESENT:
 				return { Texture::Layout::PRESENT_SRC, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
 		}
+		// Shouldn't happen but MSVC will throw warning 4715 because they don't analyze enum class control paths
+		return { Texture::Layout::UNDEFINED, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
 	}
 }
 
