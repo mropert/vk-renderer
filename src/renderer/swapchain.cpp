@@ -6,12 +6,12 @@
 #include <renderer/device.h>
 #include <renderer/texture.h>
 
-renderer::Swapchain::Swapchain( Device& device, Texture::Format desired_format, bool vsync )
+renderer::Swapchain::Swapchain( Device& device, bool vsync )
 	: _device( &device )
 {
 	PROFILER_SCOPE();
 
-	auto [ swapchain, format ] = create( device, desired_format, vsync, nullptr );
+	auto [ swapchain, format ] = create( device, vsync, nullptr );
 	_swapchain = std::move( swapchain );
 	_format = static_cast<Texture::Format>( std::to_underlying( format ) );
 
@@ -28,9 +28,9 @@ renderer::Swapchain::Swapchain( Device& device, Texture::Format desired_format, 
 	}
 }
 
-void renderer::Swapchain::recreate( Texture::Format desired_format, bool vsync )
+void renderer::Swapchain::recreate( bool vsync )
 {
-	auto [ new_swapchain, format ] = create( *_device, desired_format, vsync, *_swapchain );
+	auto [ new_swapchain, format ] = create( *_device, vsync, *_swapchain );
 
 	_device->wait_idle();
 	_image_views.clear();
@@ -45,15 +45,13 @@ void renderer::Swapchain::recreate( Texture::Format desired_format, bool vsync )
 }
 
 std::pair<vk::raii::SwapchainKHR, vk::Format>
-renderer::Swapchain::create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain )
+renderer::Swapchain::create( Device& device, bool vsync, VkSwapchainKHR old_swapchain )
 {
 	vkb::SwapchainBuilder builder( *device._physical_device,
 								   *device._device,
 								   *device._surface,
 								   device._gfx_queue_family_index,
 								   device._present_queue_family_index );
-	builder.set_desired_format(
-		VkSurfaceFormatKHR { .format = static_cast<VkFormat>( format ), .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } );
 	if ( vsync )
 	{
 		builder.set_desired_present_mode( VK_PRESENT_MODE_FIFO_KHR );

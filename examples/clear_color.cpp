@@ -8,7 +8,7 @@
 int main()
 {
 	renderer::Device device( "clear_color" );
-	renderer::Swapchain swapchain( device, renderer::Texture::Format::R8G8B8A8_SRGB );
+	renderer::Swapchain swapchain( device );
 
 	bool quit = false;
 

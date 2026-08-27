@@ -13,7 +13,7 @@ namespace renderer
 	class Swapchain
 	{
 	public:
-		explicit Swapchain( Device& device, Texture::Format desired_format, bool vsync = true );
+		explicit Swapchain( Device& device, bool vsync = true );
 
 		uint32_t get_frame_count() const { return _frame_count; }
 		uint32_t get_image_count() const { return static_cast<uint32_t>( _images.size() ); }
@@ -23,10 +23,10 @@ namespace renderer
 		void submit( CommandBuffer& buffer );
 		void present();
 
-		void recreate( Texture::Format desired_format, bool vsync = true );
+		void recreate( bool vsync = true );
 
 	private:
-		static std::pair<vk::raii::SwapchainKHR, vk::Format> create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain );
+		static std::pair<vk::raii::SwapchainKHR, vk::Format> create( Device& device, bool vsync, VkSwapchainKHR old_swapchain );
 		void fill_images( Texture::Format format );
 
 		Device* _device;
