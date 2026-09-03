@@ -6,14 +6,14 @@
 #include <renderer/device.h>
 #include <renderer/texture.h>
 
-renderer::Swapchain::Swapchain( Device& device, bool vsync )
+renderer::Swapchain::Swapchain( Device& device, Texture::Format format, bool vsync )
 	: _device( &device )
+	, _format( format )
 {
 	PROFILER_SCOPE();
 
-	auto [ swapchain, format ] = create( device, vsync, nullptr );
+	auto swapchain = create( device, _format, vsync, nullptr );
 	_swapchain = std::move( swapchain );
-	_format = static_cast<Texture::Format>( std::to_underlying( format ) );
 
 	fill_images( _format );
 
@@ -30,13 +30,12 @@ renderer::Swapchain::Swapchain( Device& device, bool vsync )
 
 void renderer::Swapchain::recreate( bool vsync )
 {
-	auto [ new_swapchain, format ] = create( *_device, vsync, *_swapchain );
+	auto new_swapchain = create( *_device, _format, vsync, *_swapchain );
 
 	_device->wait_idle();
 	_image_views.clear();
 	_images.clear();
 	_swapchain = std::move( new_swapchain );
-	_format = static_cast<Texture::Format>( std::to_underlying( format ) );
 	fill_images( _format );
 	for ( auto i = _submit_semaphores.size(); i < _images.size(); ++i )
 	{
@@ -44,8 +43,7 @@ void renderer::Swapchain::recreate( bool vsync )
 	}
 }
 
-std::pair<vk::raii::SwapchainKHR, vk::Format>
-renderer::Swapchain::create( Device& device, bool vsync, VkSwapchainKHR old_swapchain )
+vk::raii::SwapchainKHR renderer::Swapchain::create( Device& device, Texture::Format format, bool vsync, VkSwapchainKHR old_swapchain )
 {
 	vkb::SwapchainBuilder builder( *device._physical_device,
 								   *device._device,
@@ -62,6 +60,7 @@ renderer::Swapchain::create( Device& device, bool vsync, VkSwapchainKHR old_swap
 		builder.add_fallback_present_mode( VK_PRESENT_MODE_IMMEDIATE_KHR );
 	}
 	builder.set_desired_extent( device._extent.width, device._extent.height );
+	builder.set_desired_format( VkSurfaceFormatKHR { .format = static_cast<VkFormat>( format ) } );
 	builder.add_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_DST_BIT );
 	builder.set_old_swapchain( old_swapchain );
 
@@ -70,7 +69,16 @@ renderer::Swapchain::create( Device& device, bool vsync, VkSwapchainKHR old_swap
 	{
 		throw Error( swapchain_ret.error(), swapchain_ret.vk_result() );
 	}
-	return { vk::raii::SwapchainKHR { device._device, swapchain_ret.value() }, vk::Format( swapchain_ret->image_format ) };
+	// vk-bootstrap might sneakily use fallbacks we did not request, that counts as failures for us
+	if ( swapchain_ret->image_format != static_cast<VkFormat>( format ) )
+	{
+		throw Error( "Requested swapchain format isn't supported by the device" );
+	}
+	if ( !vsync && swapchain_ret->present_mode == VK_PRESENT_MODE_FIFO_KHR )
+	{
+		throw Error( "Device does not support async presentation modes" );
+	}
+	return { device._device, swapchain_ret.value() };
 }
 
 void renderer::Swapchain::fill_images( Texture::Format format )

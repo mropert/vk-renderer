@@ -1,14 +1,18 @@
 #include <SDL3/SDL.h>
 #include <renderer/command_buffer.h>
+#include <renderer/details/profiler.h>
 #include <renderer/device.h>
 #include <renderer/swapchain.h>
-
-#include <renderer/details/profiler.h>
 
 int main()
 {
 	renderer::Device device( "clear_color" );
-	renderer::Swapchain swapchain( device );
+#ifdef __APPLE__
+	constexpr auto format = renderer::Texture::Format::B8G8R8A8_SRGB;
+#else
+	constexpr auto format = renderer::Texture::Format::R8G8B8A8_SRGB;
+#endif
+	renderer::Swapchain swapchain( device, format );
 
 	bool quit = false;
 
@@ -29,17 +33,13 @@ int main()
 
 		command_buffer->reset();
 		command_buffer->begin();
-		command_buffer->texture_barrier( swapchain_image,
-											renderer::ResourceState::UNDEFINED,
-											renderer::ResourceState::COLOR_ATTACHMENT );
+		command_buffer->texture_barrier( swapchain_image, renderer::ResourceState::UNDEFINED, renderer::ResourceState::COLOR_ATTACHMENT );
 		command_buffer->begin_rendering(
 			device.get_extent(),
 			renderer::RenderAttachment { .target = swapchain_image_view, .clear_value = { { 1.f, 0.f, 1.f, 1.f } } },
-			renderer::RenderAttachment {} );
+			renderer::RenderAttachment { } );
 		command_buffer->end_rendering();
-		command_buffer->texture_barrier( swapchain_image,
-											renderer::ResourceState::COLOR_ATTACHMENT,
-											renderer::ResourceState::PRESENT );
+		command_buffer->texture_barrier( swapchain_image, renderer::ResourceState::COLOR_ATTACHMENT, renderer::ResourceState::PRESENT );
 		command_buffer->end();
 
 		swapchain.submit( *command_buffer );
