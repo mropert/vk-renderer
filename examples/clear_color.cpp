@@ -35,9 +35,7 @@ int main()
 		command_buffer->begin();
 		command_buffer->texture_barrier( swapchain_image, renderer::ResourceState::UNDEFINED, renderer::ResourceState::COLOR_ATTACHMENT );
 		command_buffer->begin_rendering(
-			device.get_extent(),
-			renderer::RenderAttachment { .target = swapchain_image_view, .clear_value = { { 1.f, 0.f, 1.f, 1.f } } },
-			renderer::RenderAttachment { } );
+			{ .color_target = { .target = swapchain_image_view, .clear_value = { { 1.f, 0.f, 1.f, 1.f } } } } );
 		command_buffer->end_rendering();
 		command_buffer->texture_barrier( swapchain_image, renderer::ResourceState::COLOR_ATTACHMENT, renderer::ResourceState::PRESENT );
 		command_buffer->end();
