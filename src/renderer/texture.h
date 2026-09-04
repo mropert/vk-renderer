@@ -4,6 +4,7 @@
 
 namespace renderer
 {
+	class BindlessManagerBase;
 	class CommandBuffer;
 	class Device;
 	class Swapchain;
@@ -75,16 +76,15 @@ namespace renderer
 		static std::size_t get_bpp( Format format );
 
 	protected:
-		vk::Image get_image() const { return _image; }
-
 		Texture( vk::Image image, const Desc& desc )
 			: _image( image )
 			, _desc( desc )
 		{
 		}
 
-	private:
 		vk::Image _image;
+
+	private:
 		Desc _desc;
 
 		friend class CommandBuffer;
@@ -111,12 +111,25 @@ namespace renderer
 			DEPTH = std::to_underlying( vk::ImageAspectFlagBits::eDepth )
 		};
 
-		// private:
+		TextureView() = default;
+
+		Extent2D get_extent() const { return _extent; }
+
+	protected:
+		TextureView( vk::ImageView view, Extent2D extent )
+			: _view( view )
+			, _extent( extent )
+		{
+		}
 		vk::ImageView _view;
 
+	private:
+		// Those fields are a repeat of the underlying descriptor, but they make the API more convenient to use
+		Extent2D _extent;
+
+		friend class BindlessManagerBase;
 		friend class CommandBuffer;
 		friend class Device;
-		friend class raii::TextureView;
 	};
 
 	namespace raii
@@ -125,7 +138,7 @@ namespace renderer
 		{
 		public:
 			Texture() = default;
-			~Texture() { _allocation.destroy( get_image() ); }
+			~Texture() { _allocation.destroy( _image ); }
 			Texture( const Texture& ) = delete;
 			Texture& operator=( const Texture& ) = delete;
 
@@ -153,28 +166,57 @@ namespace renderer
 
 			void clear()
 			{
-				*static_cast<renderer::Texture*>( this ) = {};
-				_allocation = {};
+				*static_cast<renderer::Texture*>( this ) = { };
+				_allocation = { };
 			}
 
 			friend class renderer::Device;
 			vma::raii::Allocation _allocation;
 		};
 
-		class TextureView
+		class TextureView : public renderer::TextureView
 		{
 		public:
 			TextureView() = default;
-			operator renderer::TextureView() const { return { _view }; }
+			~TextureView()
+			{
+				if ( _view )
+				{
+					_device.destroyImageView( _view );
+				};
+			}
+			TextureView( const TextureView& ) = delete;
+			TextureView& operator=( const TextureView& ) = delete;
+
+			TextureView( TextureView&& rhs ) noexcept
+				: renderer::TextureView( rhs )
+				, _device( rhs._device )
+			{
+				rhs.clear();
+			}
+
+			TextureView& operator=( TextureView&& rhs ) noexcept
+			{
+				static_cast<renderer::TextureView&>( *this ) = static_cast<renderer::TextureView&>( rhs );
+				_device = rhs._device;
+				rhs.clear();
+				return *this;
+			}
 
 		private:
-			explicit TextureView( vk::raii::ImageView view )
-				: _view( std::move( view ) )
+			TextureView( vk::raii::ImageView view, Extent2D extent )
+				: renderer::TextureView( view.release(), extent )
 			{
 			}
 
+			void clear()
+			{
+				*static_cast<renderer::TextureView*>( this ) = { };
+				_device = nullptr;
+			}
+
 			friend class renderer::Device;
-			vk::raii::ImageView _view = nullptr;
+			vk::Device _device = nullptr;
 		};
 	}
 }

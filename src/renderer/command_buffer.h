@@ -41,6 +41,13 @@ namespace renderer
 		std::optional<std::array<float, 4>> clear_value;
 	};
 
+	struct RenderInfo
+	{
+		RenderAttachment color_target;
+		RenderAttachment depth_target;
+		Extent2D extent;	// Defaults to color_target extent if left blank
+	};
+
 	class CommandBuffer
 	{
 	public:
@@ -58,7 +65,7 @@ namespace renderer
 
 		void memory_barrier( ResourceState src, ResourceState dst );
 
-		void begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target = { } );
+		void begin_rendering( RenderInfo info );
 		void end_rendering();
 
 		void bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager );

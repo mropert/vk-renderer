@@ -210,7 +210,7 @@ renderer::raii::TextureView renderer::Device::create_texture_view( const Texture
 
 
 	auto view = _device.createImageView( image_view_info );
-	return raii::TextureView( std::move( view ) );
+	return raii::TextureView( std::move( view ), texture.get_extent() );
 }
 
 renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter, Sampler::ReductionMode mode )

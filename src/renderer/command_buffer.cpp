@@ -225,56 +225,61 @@ void renderer::CommandBuffer::memory_barrier( ResourceState from, ResourceState 
 	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .memoryBarrierCount = 1, .pMemoryBarriers = &barrier } );
 }
 
-void renderer::CommandBuffer::begin_rendering( Extent2D extent, RenderAttachment color_target, RenderAttachment depth_target )
+void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 {
-	vk::RenderingAttachmentInfo color_attachment { .imageView = color_target.target._view,
+	vk::RenderingAttachmentInfo color_attachment { .imageView = info.color_target.target._view,
 												   .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 												   .storeOp = vk::AttachmentStoreOp::eStore };
-	if ( color_target.clear_value )
+	if ( info.color_target.clear_value )
 	{
 		color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-		color_attachment.clearValue = { .color = vk::ClearColorValue( *color_target.clear_value ) };
+		color_attachment.clearValue = { .color = vk::ClearColorValue( *info.color_target.clear_value ) };
 	}
 	else
 	{
 		color_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
 	}
 
-	if ( color_target.resolve_target._view )
+	if ( info.color_target.resolve_target._view )
 	{
 		color_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
-		color_attachment.resolveImageView = color_target.resolve_target._view;
+		color_attachment.resolveImageView = info.color_target.resolve_target._view;
 		color_attachment.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
 	}
 
 	vk::RenderingAttachmentInfo depth_attachment;
-	if ( depth_target.target._view )
+	if ( info.depth_target.target._view )
 	{
-		depth_attachment = { .imageView = depth_target.target._view,
+		depth_attachment = { .imageView = info.depth_target.target._view,
 							 .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 							 .storeOp = vk::AttachmentStoreOp::eStore };
-		if ( depth_target.clear_value )
+		if ( info.depth_target.clear_value )
 		{
 			depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-			depth_attachment.clearValue = { .depthStencil = { .depth = ( *depth_target.clear_value )[ 0 ] } };
+			depth_attachment.clearValue = { .depthStencil = { .depth = ( *info.depth_target.clear_value )[ 0 ] } };
 		}
 		else
 		{
 			depth_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
 		}
-		if ( depth_target.resolve_target._view )
+		if ( info.depth_target.resolve_target._view )
 		{
 			depth_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
-			depth_attachment.resolveImageView = depth_target.resolve_target._view;
+			depth_attachment.resolveImageView = info.depth_target.resolve_target._view;
 			depth_attachment.resolveImageLayout = vk::ImageLayout::eDepthAttachmentOptimal;
 		}
 	}
 
-	const vk::RenderingInfo renderInfo { .renderArea = vk::Rect2D { .extent = extent },
+	if ( info.extent.height == 0u && info.extent.width == 0u )
+	{
+		info.extent = info.color_target.target.get_extent();
+	}
+
+	const vk::RenderingInfo renderInfo { .renderArea = vk::Rect2D { .extent = info.extent },
 										 .layerCount = 1,
 										 .colorAttachmentCount = 1,
 										 .pColorAttachments = &color_attachment,
-										 .pDepthAttachment = depth_target.target._view ? &depth_attachment : nullptr };
+										 .pDepthAttachment = info.depth_target.target._view ? &depth_attachment : nullptr };
 
 	_cmd_buffer.beginRendering( renderInfo );
 }
