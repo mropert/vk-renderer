@@ -191,6 +191,7 @@ namespace renderer
 			TextureView( TextureView&& rhs ) noexcept
 				: renderer::TextureView( rhs )
 				, _device( rhs._device )
+				, _dispatcher( rhs._dispatcher )
 			{
 				rhs.clear();
 			}
@@ -199,24 +200,30 @@ namespace renderer
 			{
 				static_cast<renderer::TextureView&>( *this ) = static_cast<renderer::TextureView&>( rhs );
 				_device = rhs._device;
+				_dispatcher = rhs._dispatcher;
 				rhs.clear();
 				return *this;
 			}
 
 		private:
 			TextureView( vk::raii::ImageView view, Extent2D extent )
-				: renderer::TextureView( view.release(), extent )
+				: renderer::TextureView( view, extent )
+				, _device( view.getDevice() )
+				, _dispatcher( view.getDispatcher() )
 			{
+				view.release();
 			}
 
 			void clear()
 			{
 				*static_cast<renderer::TextureView*>( this ) = { };
 				_device = nullptr;
+				_dispatcher = nullptr;
 			}
 
 			friend class renderer::Device;
 			vk::Device _device = nullptr;
+			const vk::raii::detail::DeviceDispatcher* _dispatcher = nullptr;
 		};
 	}
 }
