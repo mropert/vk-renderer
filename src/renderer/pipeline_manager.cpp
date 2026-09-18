@@ -57,7 +57,7 @@ renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::pat
 renderer::PipelineHandle renderer::PipelineManager::add( Pipeline::Desc desc, std::initializer_list<ShaderSource> sources )
 {
 	std::unique_lock lock( _mtx );
-	auto handle = static_cast<PipelineHandle>( _items.size() );
+	const PipelineHandle handle { static_cast<uint32_t>( _items.size() ) };
 	auto& entry = _items.emplace_back( std::move( desc ) );
 	entry.sources.reserve( sources.size() );
 	for ( const auto& source : sources )
@@ -97,7 +97,7 @@ void renderer::PipelineManager::update()
 
 renderer::Pipeline renderer::PipelineManager::get( PipelineHandle pipeline ) const
 {
-	return std::get<raii::Pipeline>( _items[ pipeline ].pipeline );
+	return std::get<raii::Pipeline>( _items[ pipeline.index ].pipeline );
 }
 
 void renderer::PipelineManager::wait_ready()
@@ -205,7 +205,7 @@ void renderer::PipelineManager::rebuild_job()
 	std::vector<const raii::ShaderCode*> shaders;
 
 	std::unique_lock lock( _mtx );
-	for ( PipelineHandle i = 0; i < _items.size(); ++i )
+	for ( size_t i = 0; i < _items.size(); ++i )
 	{
 		size_t available = 0;
 		int rebuilt = 0;

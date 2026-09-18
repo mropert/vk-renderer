@@ -19,7 +19,11 @@ namespace renderer
 	class BindlessManagerBase;
 	class Device;
 
-	using PipelineHandle = uint32_t;
+	struct PipelineHandle
+	{
+		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
+		uint32_t index = UNSET;
+	};
 
 	class PipelineManager
 	{
@@ -67,7 +71,7 @@ namespace renderer
 		std::condition_variable_any _ready_signal;
 		size_t _available_pipelines = 0;
 		std::vector<Error> _pending_errors;
-		std::unordered_map<PipelineHandle, MakePipelineResult> _updated_items;
+		std::unordered_map<size_t, MakePipelineResult> _updated_items;
 		std::jthread _rebuild_thread;
 	};
 }
