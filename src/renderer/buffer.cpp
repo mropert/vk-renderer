@@ -19,6 +19,12 @@ void renderer::raii::Buffer::unmap()
 	_mapped_address = nullptr;
 }
 
+void renderer::raii::Buffer::flush()
+{
+	assert( _mapped_address != nullptr );
+	vmaInvalidateAllocation( _allocation.allocator, _allocation.allocation, 0, get_size() );
+}
+
 vk::DeviceAddress renderer::Buffer::get_device_address() const
 {
 	assert( ( _usage & Usage::SHADER_DEVICE_ADDRESS ) == Usage::SHADER_DEVICE_ADDRESS );

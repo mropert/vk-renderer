@@ -224,16 +224,27 @@ renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter
 	return raii::Sampler( std::move( sampler ) );
 }
 
-renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std::size_t size, bool upload )
+static constexpr VmaAllocationCreateFlags calc_buffer_usage_flags( renderer::Buffer::CpuUsage cpu_usage )
+{
+	switch ( cpu_usage )
+	{
+		case renderer::Buffer::CpuUsage::NONE:
+			return 0u;
+		case renderer::Buffer::CpuUsage::WRITE:
+			return VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+		case renderer::Buffer::CpuUsage::READ_WRITE:
+			return VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+	}
+	throw renderer::Error( "Unsupported buffer cpu usage" );
+}
+
+renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std::size_t size, Buffer::CpuUsage cpu_usage )
 {
 	PROFILER_SCOPE();
 	const VkBufferCreateInfo buffer_Info { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 										   .size = size,
 										   .usage = static_cast<VkBufferUsageFlags>( usage ) };
-	const VmaAllocationCreateInfo vma_alloc_info = {
-		.flags = upload ? ( VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT ) : 0u,
-		.usage = VMA_MEMORY_USAGE_AUTO
-	};
+	const VmaAllocationCreateInfo vma_alloc_info = { .flags = calc_buffer_usage_flags( cpu_usage ), .usage = VMA_MEMORY_USAGE_AUTO };
 
 	VkBuffer buffer { };
 	VmaAllocation allocation { };

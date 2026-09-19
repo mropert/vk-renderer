@@ -131,6 +131,8 @@ namespace renderer
 						 vk::AccessFlagBits2::eTransferWrite };
 			case ResourceState::PRESENT:
 				return { Texture::Layout::PRESENT_SRC, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
+			case ResourceState::HOST_READ:
+				return { Texture::Layout::GENERAL, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead };
 		}
 		// Shouldn't happen but MSVC will throw warning 4715 because they don't analyze enum class control paths
 		return { Texture::Layout::UNDEFINED, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };

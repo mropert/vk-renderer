@@ -31,7 +31,8 @@ namespace renderer
 		DEPTH_READ,
 		TRANSFER_SRC,
 		TRANSFER_DST,
-		PRESENT
+		PRESENT,
+		HOST_READ
 	};
 
 	struct RenderAttachment

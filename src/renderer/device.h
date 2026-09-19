@@ -50,7 +50,7 @@ namespace renderer
 
 		raii::Sampler create_sampler( Sampler::Filter filter, Sampler::ReductionMode mode = Sampler::ReductionMode::AVERAGE );
 
-		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, bool upload = false );
+		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, Buffer::CpuUsage cpu_usage = Buffer::CpuUsage::NONE );
 
 		raii::Pipeline create_graphics_pipeline( const Pipeline::Desc& desc,
 												 std::span<const raii::ShaderCode*> shaders,

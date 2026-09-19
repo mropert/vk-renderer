@@ -25,7 +25,7 @@ renderer::BindlessManagerBase::BindlessBuffer::BindlessBuffer( Device& device, u
 		// TODO: implement support for devices without BAR/ReBAR if needed
 		throw Error( "Bindless buffer can't fit into memory mappable device memory" );
 	}
-	_buffer = device.create_buffer( Buffer::Usage::STORAGE_BUFFER, capacity, true );
+	_buffer = device.create_buffer( Buffer::Usage::STORAGE_BUFFER, capacity, Buffer::CpuUsage::WRITE );
 }
 
 uint32_t renderer::BindlessManagerBase::BindlessBuffer::append( const void* data, uint32_t size )

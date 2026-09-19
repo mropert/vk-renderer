@@ -22,6 +22,13 @@ namespace renderer
 			SHADER_DEVICE_ADDRESS = std::to_underlying( vk::BufferUsageFlagBits::eShaderDeviceAddress ),
 		};
 
+		enum class CpuUsage
+		{
+			NONE = 0,
+			WRITE,
+			READ_WRITE
+		};
+
 		Buffer() = default;
 		vk::DeviceAddress get_device_address() const;
 		void* get_mapped_address() const;
@@ -92,6 +99,7 @@ namespace renderer
 
 			void map();
 			void unmap();
+			void flush();
 
 		private:
 			Buffer( const renderer::Buffer& Desc, const vma::raii::Allocation& allocation )
