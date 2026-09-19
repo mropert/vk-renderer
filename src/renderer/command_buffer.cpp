@@ -144,13 +144,15 @@ void renderer::CommandBuffer::texture_barrier( const Texture& tex, ResourceState
 	texture_barrier( tex, src.layout, dst.layout, src.stage, dst.stage, src.access, dst.access, mip_level );
 }
 
-void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst )
+void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst, int src_mip, int dst_mip, bool linear_filter )
 {
+	const auto src_size = src.get_extent( src_mip );
+	const auto dst_size = dst.get_extent( dst_mip );
 	const vk::ImageBlit2 blit_region {
-		.srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-		.srcOffsets = { { vk::Offset3D { }, vk::Offset3D( src._desc.extent.width, src._desc.extent.height, 1 ) } },
-		.dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-		.dstOffsets = { { vk::Offset3D { }, vk::Offset3D( dst._desc.extent.width, dst._desc.extent.height, 1 ) } }
+		.srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = static_cast<uint32_t>( src_mip ), .layerCount = 1 },
+		.srcOffsets = { { vk::Offset3D { }, vk::Offset3D( src_size.width, src_size.height, 1 ) } },
+		.dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = static_cast<uint32_t>( dst_mip ), .layerCount = 1 },
+		.dstOffsets = { { vk::Offset3D { }, vk::Offset3D( dst_size.width, dst_size.height, 1 ) } }
 	};
 
 	const vk::BlitImageInfo2 blit_info { .srcImage = src._image,
@@ -158,7 +160,8 @@ void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& d
 										 .dstImage = dst._image,
 										 .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
 										 .regionCount = 1,
-										 .pRegions = &blit_region };
+										 .pRegions = &blit_region,
+										 .filter = linear_filter ? vk::Filter::eLinear : vk::Filter::eNearest };
 
 	_cmd_buffer.blitImage2( blit_info );
 }

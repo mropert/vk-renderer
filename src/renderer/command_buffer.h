@@ -56,7 +56,7 @@ namespace renderer
 		void reset();
 
 		void texture_barrier( const Texture& tex, ResourceState src, ResourceState dst, int mip_level = -1 );
-		void blit_texture( const Texture& src, const Texture& dst );
+		void blit_texture( const Texture& src, const Texture& dst, int src_mip = 0, int dst_mip = 0, bool linear_filter = false );
 
 		void copy_buffer( const Buffer& src, std::size_t offset, std::size_t size, const Buffer& dest, std::size_t dest_offset = 0 );
 		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex );
