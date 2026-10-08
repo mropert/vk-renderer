@@ -74,8 +74,9 @@ namespace renderer
 		void set_scissor( Extent2D extent );
 		// Will flip Y axis on the NDC behind the scene to be consistent with every other rendering API in town
 		void set_viewport( Extent2D extent );
-		// Pipeline must have been created with Pipeline::CullMode::DYNAMIC
 		void set_cull_mode( Pipeline::CullMode mode );
+		void set_depth_test( bool test );
+		void set_depth_write( bool write );
 
 		template <typename T>
 		void push_constants( const Pipeline& pipeline, const T& data )

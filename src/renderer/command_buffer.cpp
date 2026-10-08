@@ -327,8 +327,17 @@ void renderer::CommandBuffer::set_viewport( Extent2D extent )
 
 void renderer::CommandBuffer::set_cull_mode( Pipeline::CullMode mode )
 {
-	assert( mode != Pipeline::CullMode::DYNAMIC );
 	_cmd_buffer.setCullMode( static_cast<vk::CullModeFlagBits>( mode ) );
+}
+
+void renderer::CommandBuffer::set_depth_test( bool test )
+{
+	_cmd_buffer.setDepthTestEnable( test );
+}
+
+void renderer::CommandBuffer::set_depth_write( bool write )
+{
+	_cmd_buffer.setDepthWriteEnable( write );
 }
 
 void renderer::CommandBuffer::bind_index_buffer( const Buffer& index_buffer )

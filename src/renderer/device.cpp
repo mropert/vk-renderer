@@ -299,9 +299,7 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = static_cast<vk::PrimitiveTopology>( desc.topology ) };
 	const vk::PipelineViewportStateCreateInfo viewport { .viewportCount = 1, .scissorCount = 1 };
 	const vk::PipelineRasterizationStateCreateInfo rasterizer { .polygonMode = vk::PolygonMode::eFill,
-																.cullMode = desc.cull_mode == Pipeline::CullMode::DYNAMIC
-																	? vk::CullModeFlagBits::eNone
-																	: static_cast<vk::CullModeFlagBits>( desc.cull_mode ),
+																.cullMode = vk::CullModeFlagBits::eNone,
 																.frontFace = static_cast<vk::FrontFace>( desc.front_face ),
 																.lineWidth = 1.f };
 	const vk::PipelineMultisampleStateCreateInfo multisampling { .rasterizationSamples = static_cast<vk::SampleCountFlagBits>(
@@ -322,11 +320,11 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 														.pColorAttachmentFormats = &color_format,
 														.depthAttachmentFormat = static_cast<vk::Format>( desc.depth_format ) };
 
-	std::vector<vk::DynamicState> states { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
-	if ( desc.cull_mode == Pipeline::CullMode::DYNAMIC )
-	{
-		states.push_back( vk::DynamicState::eCullMode );
-	}
+	const std::array states { vk::DynamicState::eViewport,
+							  vk::DynamicState::eScissor,
+							  vk::DynamicState::eCullMode,
+							  vk::DynamicState::eDepthTestEnable,
+							  vk::DynamicState::eDepthWriteEnable };
 	const vk::PipelineDynamicStateCreateInfo dynamic_state { .dynamicStateCount = static_cast<uint32_t>( states.size() ),
 															 .pDynamicStates = states.data() };
 

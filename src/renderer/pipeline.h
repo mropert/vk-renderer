@@ -22,9 +22,7 @@ namespace renderer
 		{
 			NONE = std::to_underlying( vk::CullModeFlagBits::eNone ),
 			FRONT = std::to_underlying( vk::CullModeFlagBits::eFront ),
-			BACK = std::to_underlying( vk::CullModeFlagBits::eBack ),
-			DYNAMIC = static_cast<std::underlying_type_t<vk::CullModeFlagBits>>(
-				-1 ) // Only valid at creation, see command_buffer::set_cull_mode()
+			BACK = std::to_underlying( vk::CullModeFlagBits::eBack )
 		};
 
 		enum class FrontFace : std::underlying_type_t<vk::FrontFace>
@@ -45,7 +43,6 @@ namespace renderer
 			Texture::Format color_format;
 			Texture::Format depth_format;
 			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
-			CullMode cull_mode = CullMode::BACK;
 			FrontFace front_face = FrontFace::COUNTER_CLOCKWISE;
 			int sample_count = 1;
 			// Compute & graphics pipelines
