@@ -325,6 +325,12 @@ void renderer::CommandBuffer::set_viewport( Extent2D extent )
 	_cmd_buffer.setViewport( 0, viewport );
 }
 
+void renderer::CommandBuffer::set_cull_mode( Pipeline::CullMode mode )
+{
+	assert( mode != Pipeline::CullMode::DYNAMIC );
+	_cmd_buffer.setCullMode( static_cast<vk::CullModeFlagBits>( mode ) );
+}
+
 void renderer::CommandBuffer::bind_index_buffer( const Buffer& index_buffer )
 {
 	assert( ( index_buffer._usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER );

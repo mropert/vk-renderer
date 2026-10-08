@@ -3,13 +3,13 @@
 #include <array>
 #include <optional>
 #include <renderer/common.h>
+#include <renderer/pipeline.h>
 #include <renderer/texture.h>
 
 namespace renderer
 {
 	class BindlessManagerBase;
 	class Buffer;
-	class Pipeline;
 	class TextureView;
 
 	// Simplified stage + access fold for most common barriers, inspired by D3D12_RESOURCE_STATE
@@ -18,7 +18,7 @@ namespace renderer
 		UNDEFINED,
 		INDIRECT_ARGUMENT,
 		INDEX_READ,
-		VERTEX_SHADER_READ,	// Includes geometry and mesh shaders
+		VERTEX_SHADER_READ, // Includes geometry and mesh shaders
 		FRAGMENT_SHADER_READ,
 		COMPUTE_SHADER_READ,
 		SHADER_READ,
@@ -46,7 +46,7 @@ namespace renderer
 	{
 		RenderAttachment color_target;
 		RenderAttachment depth_target;
-		Extent2D extent;	// Defaults to color_target extent if left blank
+		Extent2D extent; // Defaults to color_target extent if left blank
 	};
 
 	class CommandBuffer
@@ -74,6 +74,8 @@ namespace renderer
 		void set_scissor( Extent2D extent );
 		// Will flip Y axis on the NDC behind the scene to be consistent with every other rendering API in town
 		void set_viewport( Extent2D extent );
+		// Pipeline must have been created with Pipeline::CullMode::DYNAMIC
+		void set_cull_mode( Pipeline::CullMode mode );
 
 		template <typename T>
 		void push_constants( const Pipeline& pipeline, const T& data )

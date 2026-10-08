@@ -22,7 +22,9 @@ namespace renderer
 		{
 			NONE = std::to_underlying( vk::CullModeFlagBits::eNone ),
 			FRONT = std::to_underlying( vk::CullModeFlagBits::eFront ),
-			BACK = std::to_underlying( vk::CullModeFlagBits::eBack )
+			BACK = std::to_underlying( vk::CullModeFlagBits::eBack ),
+			DYNAMIC = static_cast<std::underlying_type_t<vk::CullModeFlagBits>>(
+				-1 ) // Only valid at creation, see command_buffer::set_cull_mode()
 		};
 
 		enum class FrontFace : std::underlying_type_t<vk::FrontFace>
