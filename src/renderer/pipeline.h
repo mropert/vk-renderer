@@ -45,6 +45,7 @@ namespace renderer
 			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
 			FrontFace front_face = FrontFace::COUNTER_CLOCKWISE;
 			int sample_count = 1;
+			bool alpha_blend = false;
 			// Compute & graphics pipelines
 			uint32_t push_constants_size = 0;
 		};

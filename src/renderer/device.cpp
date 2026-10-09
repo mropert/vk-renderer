@@ -307,14 +307,23 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 																 .minSampleShading = 1.0f };
 	const vk::PipelineDepthStencilStateCreateInfo depth_stencil = { .depthTestEnable = true,
 																	.depthWriteEnable = true,
-																	.depthCompareOp = vk::CompareOp::eGreaterOrEqual,
+																	.depthCompareOp = desc.alpha_blend ? vk::CompareOp::eGreaterOrEqual
+																									   : vk::CompareOp::eGreater,
 																	.maxDepthBounds = 1.f };
-	const vk::PipelineColorBlendAttachmentState blend_attachment { .colorWriteMask = vk::ColorComponentFlagBits::eR
-																	   | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
-																	   | vk::ColorComponentFlagBits::eA };
-	const vk::PipelineColorBlendStateCreateInfo blend_state = { .logicOp = vk::LogicOp::eCopy,
-																.attachmentCount = 1,
-																.pAttachments = &blend_attachment };
+	vk::PipelineColorBlendAttachmentState blend_attachment { .colorWriteMask = vk::ColorComponentFlagBits::eR
+																 | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB };
+	if ( desc.alpha_blend )
+	{
+		blend_attachment.colorWriteMask |= vk::ColorComponentFlagBits::eA;
+		blend_attachment.blendEnable = true;
+		blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+		blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+		blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
+		blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+		blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+		blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
+	}
+	const vk::PipelineColorBlendStateCreateInfo blend_state = { .attachmentCount = 1, .pAttachments = &blend_attachment };
 	const auto color_format = static_cast<vk::Format>( desc.color_format );
 	const vk::PipelineRenderingCreateInfo render_info { .colorAttachmentCount = 1,
 														.pColorAttachmentFormats = &color_format,
