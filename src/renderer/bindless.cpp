@@ -44,12 +44,14 @@ uint32_t renderer::BindlessManagerBase::BindlessBuffer::append( const void* data
 renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<const uint32_t> buffer_capacities )
 	: _device( &device )
 {
-	_samplers.reserve( 2 );
-	_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR ) );
-	if ( device.get_properties().minmax_filter_support )
-	{
-		_samplers.push_back( device.create_sampler( Sampler::Filter::LINEAR, Sampler::ReductionMode::MIN ) );
-	}
+	_samplers.push_back( device.create_sampler( { .filter = Sampler::Filter::LINEAR } ) );
+	_samplers.push_back( device.get_properties().minmax_filter_support
+							 ? device.create_sampler( { .filter = Sampler::Filter::LINEAR, .reduction_mode = Sampler::ReductionMode::MIN } )
+							 : raii::Sampler() );
+	_samplers.push_back( device.create_sampler( { .filter = Sampler::Filter::LINEAR,
+												  .address_mode = Sampler::AddressMode::BORDER,
+												  .compare_op = CompareOp::LESS_OR_EQUAL,
+												  .white_border = true } ) );
 
 	_buffers.reserve( buffer_capacities.size() );
 	for ( const auto capacity : buffer_capacities )
@@ -116,7 +118,7 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 	samplers_info.reserve( _samplers.size() );
 	for ( const renderer::Sampler sampler : _samplers )
 	{
-		samplers_info.push_back( { .sampler = sampler._sampler } );
+		samplers_info.push_back( { .sampler = sampler._sampler ? sampler._sampler : Sampler( _samplers[ 0 ] )._sampler } );
 	};
 
 	std::vector<vk::DescriptorBufferInfo> buffers_info( _buffers.size() );

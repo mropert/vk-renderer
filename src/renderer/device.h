@@ -48,7 +48,7 @@ namespace renderer
 		raii::Texture create_texture( const Texture::Desc& desc );
 		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect, int mip_level = -1 );
 
-		raii::Sampler create_sampler( Sampler::Filter filter, Sampler::ReductionMode mode = Sampler::ReductionMode::AVERAGE );
+		raii::Sampler create_sampler( Sampler::Desc desc );
 
 		raii::Buffer create_buffer( Buffer::Usage usage, std::size_t size, Buffer::CpuUsage cpu_usage = Buffer::CpuUsage::NONE );
 

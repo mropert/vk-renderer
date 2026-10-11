@@ -44,6 +44,7 @@ namespace renderer
 			Texture::Format depth_format;
 			PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
 			FrontFace front_face = FrontFace::COUNTER_CLOCKWISE;
+			CompareOp depth_compare_op = CompareOp::GREATER;
 			int sample_count = 1;
 			bool alpha_blend = false;
 			// Compute & graphics pipelines

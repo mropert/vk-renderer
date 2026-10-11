@@ -117,6 +117,15 @@ namespace renderer
 	using StatisticsQuery = ::vk::QueryPool;
 	using TimestampQuery = ::vk::QueryPool;
 
+	enum class CompareOp : std::underlying_type_t<vk::CompareOp>
+	{
+		NEVER = std::to_underlying( vk::CompareOp::eNever ),
+		LESS = std::to_underlying( vk::CompareOp::eLess ),
+		LESS_OR_EQUAL = std::to_underlying( vk::CompareOp::eLessOrEqual ),
+		GREATER = std::to_underlying( vk::CompareOp::eGreater ),
+		GREATER_OR_EQUAL = std::to_underlying( vk::CompareOp::eGreaterOrEqual )
+	};
+
 	class Error : public std::runtime_error
 	{
 	public:

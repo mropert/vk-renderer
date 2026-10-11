@@ -79,6 +79,7 @@ namespace renderer
 		// TODO: allow for user supplied samplers to be added
 		static constexpr BindlessSampler LINEAR_SAMPLER { 0 };
 		static constexpr BindlessSampler LINEAR_MIN_SAMPLER { 1 }; // If supported by device
+		static constexpr BindlessSampler SHADOW_SAMPLER { 2 }; // Linear sampler, clamp to white, compare less or equal
 
 		std::array<vk::DescriptorSetLayout, SETS_COUNT> get_layouts() const
 		{

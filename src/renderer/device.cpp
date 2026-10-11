@@ -213,14 +213,22 @@ renderer::raii::TextureView renderer::Device::create_texture_view( const Texture
 	return raii::TextureView( std::move( view ), texture.get_extent() );
 }
 
-renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Filter filter, Sampler::ReductionMode mode )
+renderer::raii::Sampler renderer::Device::create_sampler( Sampler::Desc desc )
 {
 	PROFILER_SCOPE();
-	const vk::SamplerReductionModeCreateInfo reduction_info { .reductionMode = static_cast<vk::SamplerReductionMode>( mode ) };
+	const vk::SamplerReductionModeCreateInfo reduction_info { .reductionMode = static_cast<vk::SamplerReductionMode>(
+																  desc.reduction_mode ) };
 	auto sampler = _device.createSampler( vk::SamplerCreateInfo { .pNext = &reduction_info,
-																  .magFilter = static_cast<vk::Filter>( filter ),
-																  .minFilter = static_cast<vk::Filter>( filter ),
-																  .maxLod = VK_LOD_CLAMP_NONE } );
+																  .magFilter = static_cast<vk::Filter>( desc.filter ),
+																  .minFilter = static_cast<vk::Filter>( desc.filter ),
+																  .addressModeU = static_cast<vk::SamplerAddressMode>( desc.address_mode ),
+																  .addressModeV = static_cast<vk::SamplerAddressMode>( desc.address_mode ),
+																  .addressModeW = static_cast<vk::SamplerAddressMode>( desc.address_mode ),
+																  .compareEnable = desc.compare_op != CompareOp::NEVER,
+																  .compareOp = static_cast<vk::CompareOp>( desc.compare_op ),
+																  .maxLod = VK_LOD_CLAMP_NONE,
+																  .borderColor = desc.white_border ? vk::BorderColor::eFloatOpaqueWhite
+																								   : vk::BorderColor::eFloatOpaqueBlack } );
 	return raii::Sampler( std::move( sampler ) );
 }
 
@@ -307,9 +315,9 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 																 .minSampleShading = 1.0f };
 	const vk::PipelineDepthStencilStateCreateInfo depth_stencil = { .depthTestEnable = true,
 																	.depthWriteEnable = true,
-																	.depthCompareOp = desc.alpha_blend ? vk::CompareOp::eGreaterOrEqual
-																									   : vk::CompareOp::eGreater,
+																	.depthCompareOp = static_cast<vk::CompareOp>( desc.depth_compare_op ),
 																	.maxDepthBounds = 1.f };
+
 	vk::PipelineColorBlendAttachmentState blend_attachment { .colorWriteMask = vk::ColorComponentFlagBits::eR
 																 | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB };
 	if ( desc.alpha_blend )
@@ -323,11 +331,16 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 		blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 		blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
 	}
-	const vk::PipelineColorBlendStateCreateInfo blend_state = { .attachmentCount = 1, .pAttachments = &blend_attachment };
+	vk::PipelineColorBlendStateCreateInfo blend_state { };
+	vk::PipelineRenderingCreateInfo render_info { .depthAttachmentFormat = static_cast<vk::Format>( desc.depth_format ) };
 	const auto color_format = static_cast<vk::Format>( desc.color_format );
-	const vk::PipelineRenderingCreateInfo render_info { .colorAttachmentCount = 1,
-														.pColorAttachmentFormats = &color_format,
-														.depthAttachmentFormat = static_cast<vk::Format>( desc.depth_format ) };
+	if ( desc.color_format != Texture::Format::UNDEFINED )
+	{
+		blend_state.attachmentCount = 1;
+		blend_state.pAttachments = &blend_attachment;
+		render_info.colorAttachmentCount = 1;
+		render_info.pColorAttachmentFormats = &color_format;
+	}
 
 	const std::array states { vk::DynamicState::eViewport,
 							  vk::DynamicState::eScissor,

@@ -46,7 +46,7 @@ namespace renderer
 	{
 		RenderAttachment color_target;
 		RenderAttachment depth_target;
-		Extent2D extent; // Defaults to color_target extent if left blank
+		Extent2D extent; // Defaults to color_target or depth_target extent if left blank
 	};
 
 	class CommandBuffer
