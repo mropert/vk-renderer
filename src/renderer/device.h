@@ -109,6 +109,7 @@ namespace renderer
 			std::array<uint32_t, 3> max_mesh_shader_group_size;
 			bool draw_indirect_count_support = false;
 			bool minmax_filter_support = false;
+			bool debug_labels_support = false;
 		};
 
 		const Properties& get_properties() const { return _properties; }

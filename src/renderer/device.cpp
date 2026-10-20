@@ -32,15 +32,31 @@ renderer::Device::Device( const char* appname )
 	Uint32 ext_count = 0;
 	const auto exts = SDL_Vulkan_GetInstanceExtensions( &ext_count );
 
-	const auto vk_instance_result = vkb::InstanceBuilder()
-										.set_app_name( appname )
+	const auto system_info = vkb::SystemInfo::get_system_info();
+	if ( !system_info )
+	{
+		throw Error( system_info.error(), system_info.vk_result() );
+	}
+	// Debug utils is an instance extension, needed for debug labels (RenderDoc, Nsight...)
+	// Optional, command buffer labels are no-op without it
+	const bool debug_utils_support = system_info->is_extension_available( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+
+	vkb::InstanceBuilder instance_builder;
+	instance_builder
+		.set_app_name( appname )
 #if _DEBUG
-										.request_validation_layers( true )
+		.request_validation_layers( true )
 #endif
-										.use_default_debug_messenger()
-										.require_api_version( 1, 3, 0 )
-										.enable_extensions( ext_count, exts )
-										.build();
+		.use_default_debug_messenger()
+		.require_api_version( 1, 3, 0 )
+		.enable_extensions( ext_count, exts );
+	// VkBootstrap also adds it implicitly along with the debug messenger, but let's not rely on that.
+	// Duplicate extension names are harmless (SDL already duplicates the surface ones).
+	if ( debug_utils_support )
+	{
+		instance_builder.enable_extension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+	}
+	const auto vk_instance_result = instance_builder.build();
 
 	if ( !vk_instance_result )
 	{
@@ -85,6 +101,7 @@ renderer::Device::Device( const char* appname )
 	_physical_device = { _instance, physical_device_ret.value() };
 
 	set_properties();
+	_properties.debug_labels_support = debug_utils_support;
 	_properties.mesh_shader_support = physical_device_ret->enable_extension_if_present( VK_EXT_MESH_SHADER_EXTENSION_NAME );
 
 	// XXX: VkBoostrap's API is a bit inefficient at enabling optional features one by one (query device props each time)
@@ -138,7 +155,7 @@ renderer::Device::Device( const char* appname )
 	_command_buffers.reserve( buffers.size() );
 	for ( auto& buffer : buffers )
 	{
-		_command_buffers.push_back( CommandBuffer( std::move( buffer ) ) );
+		_command_buffers.push_back( CommandBuffer( std::move( buffer ), _properties.debug_labels_support ) );
 		_available_command_buffers.push( &_command_buffers.back() );
 	}
 
