@@ -11,8 +11,6 @@
 void renderer::CommandBuffer::begin()
 {
 	_cmd_buffer.begin( vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit } );
-	// Rarely used dynamic state, default to disabled so passes don't have to set it
-	set_depth_bias( 0.f, 0.f );
 #ifdef USE_OPTICK
 	_optick_previous = Optick::SetGpuContext( Optick::GPUContext( static_cast<VkCommandBuffer>( *_cmd_buffer ) ) ).cmdBuffer;
 #endif
@@ -316,6 +314,16 @@ void renderer::CommandBuffer::bind_pipeline( const Pipeline& pipeline, const Bin
 	{
 		_cmd_buffer.bindDescriptorSets( bind_point, pipeline._layout, i, sets[ i ], { } );
 	}
+}
+
+void renderer::CommandBuffer::set_dynamic_state( const Pipeline::DynamicState& state )
+{
+	set_viewport( state.viewport );
+	set_scissor( state.scissor.width == 0 && state.scissor.height == 0 ? state.viewport : state.scissor );
+	set_cull_mode( state.cull_mode );
+	set_depth_test( state.depth_test );
+	set_depth_write( state.depth_write );
+	set_depth_bias( state.depth_bias_constant, state.depth_bias_slope, state.depth_bias_clamp );
 }
 
 void renderer::CommandBuffer::set_scissor( Extent2D extent )

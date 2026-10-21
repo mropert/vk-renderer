@@ -90,13 +90,16 @@ namespace renderer
 
 		void bind_pipeline( const Pipeline& pipeline, const BindlessManagerBase& bindless_manager );
 
+		// Sets all dynamic state of graphics pipelines, must be called before drawing
+		void set_dynamic_state( const Pipeline::DynamicState& state );
+
 		void set_scissor( Extent2D extent );
 		// Will flip Y axis on the NDC behind the scene to be consistent with every other rendering API in town
 		void set_viewport( Extent2D extent );
 		void set_cull_mode( Pipeline::CullMode mode );
 		void set_depth_test( bool test );
 		void set_depth_write( bool write );
-		// Zero factors disable depth bias, which is the default when beginning a command buffer
+		// Zero factors disable depth bias
 		void set_depth_bias( float constant_factor, float slope_factor, float clamp = 0.f );
 
 		template <typename T>

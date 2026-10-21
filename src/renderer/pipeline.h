@@ -52,6 +52,20 @@ namespace renderer
 			uint32_t push_constants_size = 0;
 		};
 
+		// All the state graphics pipelines declare as dynamic, see CommandBuffer::set_dynamic_state()
+		struct DynamicState
+		{
+			Extent2D viewport;
+			Extent2D scissor; // Empty means same as viewport
+			CullMode cull_mode = CullMode::NONE;
+			bool depth_test = true;
+			bool depth_write = true;
+			// Zero factors disable depth bias
+			float depth_bias_constant = 0.f;
+			float depth_bias_slope = 0.f;
+			float depth_bias_clamp = 0.f;
+		};
+
 		Pipeline() = default;
 
 		const Desc& get_desc() const { return _desc; };
