@@ -3,6 +3,7 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
+#include <cassert>
 #include <renderer/bindless.h>
 #include <renderer/command_buffer.h>
 #include <renderer/details/profiler.h>
@@ -85,8 +86,11 @@ renderer::Device::Device( const char* appname )
 	const VkPhysicalDeviceVulkan11Features req_features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
 															.shaderDrawParameters = true };
 
+	const VkPhysicalDeviceFeatures req_features { .depthClamp = true, .depthBiasClamp = true };
+
 	auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
 								   .set_minimum_version( 1, 3 )
+								   .set_required_features( req_features )
 								   .set_required_features_13( req_features13 )
 								   .set_required_features_12( req_features12 )
 								   .set_required_features_11( req_features11 )
@@ -194,7 +198,7 @@ renderer::raii::Texture renderer::Device::create_texture( const Texture::Desc& d
 								   .format = static_cast<VkFormat>( desc.format ),
 								   .extent = { .width = desc.extent.width, .height = desc.extent.height, .depth = 1 },
 								   .mipLevels = static_cast<uint32_t>( desc.mips ),
-								   .arrayLayers = 1,
+								   .arrayLayers = static_cast<uint32_t>( desc.layers ),
 								   .samples = static_cast<VkSampleCountFlagBits>( desc.samples ),
 								   .tiling = VK_IMAGE_TILING_OPTIMAL,
 								   .usage = static_cast<VkImageUsageFlags>( desc.usage ) };
@@ -213,17 +217,20 @@ renderer::raii::Texture renderer::Device::create_texture( const Texture::Desc& d
 	return raii::Texture( image, desc, vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
 }
 
-renderer::raii::TextureView renderer::Device::create_texture_view( const Texture& texture, TextureView::Aspect aspect, int mip_level )
+renderer::raii::TextureView
+renderer::Device::create_texture_view( const Texture& texture, TextureView::Aspect aspect, int mip_level, int layer )
 {
+	assert( layer == -1 || layer < texture.get_layers() );
+	const bool array_view = layer == -1 && texture.get_layers() > 1;
 	const vk::ImageViewCreateInfo image_view_info { .image = texture._image,
-													.viewType = vk::ImageViewType::e2D,
+													.viewType = array_view ? vk::ImageViewType::e2DArray : vk::ImageViewType::e2D,
 													.format = static_cast<vk::Format>( texture.get_format() ),
 													.subresourceRange = {
 														.aspectMask = static_cast<vk::ImageAspectFlagBits>( aspect ),
 														.baseMipLevel = static_cast<uint32_t>( mip_level == -1 ? 0 : mip_level ),
 														.levelCount = mip_level == -1 ? VK_REMAINING_MIP_LEVELS : 1,
-														.baseArrayLayer = 0,
-														.layerCount = 1 } };
+														.baseArrayLayer = static_cast<uint32_t>( layer == -1 ? 0 : layer ),
+														.layerCount = layer == -1 ? VK_REMAINING_ARRAY_LAYERS : 1 } };
 
 
 	auto view = _device.createImageView( image_view_info );
@@ -323,7 +330,8 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 	const vk::PipelineVertexInputStateCreateInfo vertex_input;
 	const vk::PipelineInputAssemblyStateCreateInfo ia { .topology = static_cast<vk::PrimitiveTopology>( desc.topology ) };
 	const vk::PipelineViewportStateCreateInfo viewport { .viewportCount = 1, .scissorCount = 1 };
-	const vk::PipelineRasterizationStateCreateInfo rasterizer { .polygonMode = vk::PolygonMode::eFill,
+	const vk::PipelineRasterizationStateCreateInfo rasterizer { .depthClampEnable = desc.depth_clamp,
+																.polygonMode = vk::PolygonMode::eFill,
 																.cullMode = vk::CullModeFlagBits::eNone,
 																.frontFace = static_cast<vk::FrontFace>( desc.front_face ),
 																.lineWidth = 1.f };
@@ -359,11 +367,9 @@ renderer::raii::Pipeline renderer::Device::create_graphics_pipeline( const Pipel
 		render_info.pColorAttachmentFormats = &color_format;
 	}
 
-	const std::array states { vk::DynamicState::eViewport,
-							  vk::DynamicState::eScissor,
-							  vk::DynamicState::eCullMode,
-							  vk::DynamicState::eDepthTestEnable,
-							  vk::DynamicState::eDepthWriteEnable };
+	const std::array states { vk::DynamicState::eViewport,		  vk::DynamicState::eScissor,		   vk::DynamicState::eCullMode,
+							  vk::DynamicState::eDepthTestEnable, vk::DynamicState::eDepthWriteEnable, vk::DynamicState::eDepthBiasEnable,
+							  vk::DynamicState::eDepthBias };
 	const vk::PipelineDynamicStateCreateInfo dynamic_state { .dynamicStateCount = static_cast<uint32_t>( states.size() ),
 															 .pDynamicStates = states.data() };
 

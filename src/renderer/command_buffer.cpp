@@ -11,6 +11,8 @@
 void renderer::CommandBuffer::begin()
 {
 	_cmd_buffer.begin( vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit } );
+	// Rarely used dynamic state, default to disabled so passes don't have to set it
+	set_depth_bias( 0.f, 0.f );
 #ifdef USE_OPTICK
 	_optick_previous = Optick::SetGpuContext( Optick::GPUContext( static_cast<VkCommandBuffer>( *_cmd_buffer ) ) ).cmdBuffer;
 #endif
@@ -41,8 +43,8 @@ void renderer::CommandBuffer::texture_barrier( const Texture& tex,
 {
 	assert( mip_level == -1 || mip_level < tex.get_mips() );
 
-	const vk::ImageAspectFlags aspectMask = ( tex.get_format() == Texture::Format::D32_SFLOAT ) ? vk::ImageAspectFlagBits::eDepth
-																								: vk::ImageAspectFlagBits::eColor;
+	const vk::ImageAspectFlags aspectMask = Texture::is_depth_format( tex.get_format() ) ? vk::ImageAspectFlagBits::eDepth
+																						 : vk::ImageAspectFlagBits::eColor;
 	const vk::ImageMemoryBarrier2 imageBarrier { .srcStageMask = src_stage,
 												 .srcAccessMask = src_access,
 												 .dstStageMask = dst_stage,
@@ -348,6 +350,13 @@ void renderer::CommandBuffer::set_depth_test( bool test )
 void renderer::CommandBuffer::set_depth_write( bool write )
 {
 	_cmd_buffer.setDepthWriteEnable( write );
+}
+
+void renderer::CommandBuffer::set_depth_bias( float constant_factor, float slope_factor, float clamp )
+{
+	const bool enable = constant_factor != 0.f || slope_factor != 0.f;
+	_cmd_buffer.setDepthBiasEnable( enable );
+	_cmd_buffer.setDepthBias( constant_factor, clamp, slope_factor );
 }
 
 void renderer::CommandBuffer::bind_index_buffer( const Buffer& index_buffer )

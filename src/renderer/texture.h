@@ -27,6 +27,7 @@ namespace renderer
 			B8G8R8A8_SRGB = std::to_underlying( vk::Format::eB8G8R8A8Srgb ),
 			R16G16B16A16_SFLOAT = std::to_underlying( vk::Format::eR16G16B16A16Sfloat ),
 			R32_SFLOAT = std::to_underlying( vk::Format::eR32Sfloat ),
+			D16_UNORM = std::to_underlying( vk::Format::eD16Unorm ),
 			D32_SFLOAT = std::to_underlying( vk::Format::eD32Sfloat )
 		};
 
@@ -61,6 +62,7 @@ namespace renderer
 			Extent2D extent;
 			int mips = 1;
 			int samples = 1;
+			int layers = 1;
 		};
 
 		Texture() = default;
@@ -71,10 +73,10 @@ namespace renderer
 		Extent2D get_extent( int mip ) const { return { _desc.extent.width >> mip, _desc.extent.height >> mip }; }
 		int get_mips() const { return _desc.mips; }
 		int get_samples() const { return _desc.samples; }
-
-		std::size_t get_size() const { return _desc.extent.width * _desc.extent.height * get_bpp( _desc.format ); }
+		int get_layers() const { return _desc.layers; }
 
 		static std::size_t get_bpp( Format format );
+		static bool is_depth_format( Format format );
 
 	protected:
 		Texture( vk::Image image, const Desc& desc )
@@ -157,6 +159,9 @@ namespace renderer
 				rhs.clear();
 				return *this;
 			}
+
+			// Allocated device memory, in bytes (includes all mips and layers, as well as any padding)
+			std::size_t get_size() const { return _allocation.info.size; }
 
 		private:
 			Texture( vk::Image image, const Desc& Desc, const vma::raii::Allocation& allocation )

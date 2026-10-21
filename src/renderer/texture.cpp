@@ -12,8 +12,15 @@ std::size_t renderer::Texture::get_bpp( Format format )
 			return 4;
 		case renderer::Texture::Format::R16G16B16A16_SFLOAT:
 			return 8;
+		case renderer::Texture::Format::D16_UNORM:
+			return 2;
 		case renderer::Texture::Format::UNDEFINED:
 		default:
 			return 0;
 	}
+}
+
+bool renderer::Texture::is_depth_format( Format format )
+{
+	return format == Format::D16_UNORM || format == Format::D32_SFLOAT;
 }

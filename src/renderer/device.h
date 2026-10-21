@@ -46,7 +46,8 @@ namespace renderer
 		void release_command_buffer( CommandBuffer* buffer );
 
 		raii::Texture create_texture( const Texture::Desc& desc );
-		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect, int mip_level = -1 );
+		// mip_level and layer -1 mean all of them. Viewing all layers of an array texture creates an array view.
+		raii::TextureView create_texture_view( const Texture& texture, TextureView::Aspect aspect, int mip_level = -1, int layer = -1 );
 
 		raii::Sampler create_sampler( Sampler::Desc desc );
 

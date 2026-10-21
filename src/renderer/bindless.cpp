@@ -147,7 +147,7 @@ renderer::BindlessTexture renderer::BindlessManagerBase::add_texture( raii::Text
 {
 	assert( !individual_mips || tex.get_mips() > 1 );
 
-	const auto aspect = tex.get_format() == Texture::Format::D32_SFLOAT ? TextureView::Aspect::DEPTH : TextureView::Aspect::COLOR;
+	const auto aspect = Texture::is_depth_format( tex.get_format() ) ? TextureView::Aspect::DEPTH : TextureView::Aspect::COLOR;
 	auto view = _device->create_texture_view( tex, aspect );
 
 	std::vector<raii::TextureView> mips;

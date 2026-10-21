@@ -47,6 +47,7 @@ namespace renderer
 			CompareOp depth_compare_op = CompareOp::GREATER;
 			int sample_count = 1;
 			bool alpha_blend = false;
+			bool depth_clamp = false;
 			// Compute & graphics pipelines
 			uint32_t push_constants_size = 0;
 		};

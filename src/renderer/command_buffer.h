@@ -96,6 +96,8 @@ namespace renderer
 		void set_cull_mode( Pipeline::CullMode mode );
 		void set_depth_test( bool test );
 		void set_depth_write( bool write );
+		// Zero factors disable depth bias, which is the default when beginning a command buffer
+		void set_depth_bias( float constant_factor, float slope_factor, float clamp = 0.f );
 
 		template <typename T>
 		void push_constants( const Pipeline& pipeline, const T& data )
