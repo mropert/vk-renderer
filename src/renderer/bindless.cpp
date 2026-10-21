@@ -19,7 +19,7 @@ namespace renderer
 renderer::BindlessManagerBase::BindlessBuffer::BindlessBuffer( Device& device, uint32_t capacity )
 {
 	// Use uncached memory mapped device memory if possible
-	const bool use_mmap = capacity < std::min( 1024zu * 1024, device._properties.transfer_memory_size );
+	const bool use_mmap = capacity < std::min( 16zu * 1024 * 1024, device._properties.transfer_memory_size );
 	if ( !use_mmap )
 	{
 		// TODO: implement support for devices without BAR/ReBAR if needed
