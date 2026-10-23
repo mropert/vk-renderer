@@ -214,7 +214,19 @@ renderer::raii::Texture renderer::Device::create_texture( const Texture::Desc& d
 		throw Error( "Failed to create image", ret );
 	}
 
-	return raii::Texture( image, desc, vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
+	return raii::Texture( image, desc, track_allocation( allocation, allocation_info, MemoryResource::TEXTURE ) );
+}
+
+vma::raii::Allocation renderer::Device::track_allocation( VmaAllocation allocation, const VmaAllocationInfo& info, MemoryResource resource )
+{
+	VkMemoryPropertyFlags memory_flags = 0;
+	vmaGetMemoryTypeProperties( _allocator.get(), info.memoryType, &memory_flags );
+	_memory_tracker.add( resource, memory_flags, info.size );
+	return vma::raii::Allocation { .allocator = _allocator.get(),
+								   .allocation = allocation,
+								   .info = info,
+								   .tracker = &_memory_tracker,
+								   .resource = resource };
 }
 
 renderer::raii::TextureView
@@ -293,8 +305,18 @@ renderer::raii::Buffer renderer::Device::create_buffer( Buffer::Usage usage, std
 		address = _device.getBufferAddress( vk::BufferDeviceAddressInfo { .buffer = buffer } );
 	}
 
+	auto resource = MemoryResource::OTHER_BUFFER;
+	if ( ( usage & Buffer::Usage::INDEX_BUFFER ) == Buffer::Usage::INDEX_BUFFER )
+	{
+		resource = MemoryResource::INDEX_BUFFER;
+	}
+	else if ( ( usage & Buffer::Usage::STORAGE_BUFFER ) == Buffer::Usage::STORAGE_BUFFER )
+	{
+		resource = MemoryResource::STORAGE_BUFFER;
+	}
+
 	return raii::Buffer( renderer::Buffer( buffer, address, allocation_info.pMappedData, size, usage ),
-						 vma::raii::Allocation { _allocator.get(), allocation, allocation_info } );
+						 track_allocation( allocation, allocation_info, resource ) );
 }
 
 vk::raii::PipelineLayout renderer::Device::create_pipeline_layout( vk::ShaderStageFlags used_stages,

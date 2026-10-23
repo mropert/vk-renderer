@@ -114,8 +114,10 @@ namespace renderer
 		};
 
 		const Properties& get_properties() const { return _properties; }
+		MemoryUsage get_memory_usage() const { return _memory_tracker.get_usage(); }
 
 	private:
+		vma::raii::Allocation track_allocation( VmaAllocation allocation, const VmaAllocationInfo& info, MemoryResource resource );
 		vk::raii::PipelineLayout create_pipeline_layout( vk::ShaderStageFlags used_stages,
 														 uint32_t push_constants_size,
 														 const BindlessManagerBase& bindless_manager );
@@ -136,6 +138,7 @@ namespace renderer
 		uint32_t _present_queue_family_index = 0;
 		vk::raii::Queue _gfx_queue = nullptr;
 		vma::raii::Allocator _allocator;
+		MemoryTracker _memory_tracker;
 		vk::raii::CommandPool _command_pool = nullptr;
 		std::vector<CommandBuffer> _command_buffers;
 		std::queue<CommandBuffer*> _available_command_buffers;
