@@ -26,6 +26,7 @@ namespace renderer
 		ANY_BUFFER_READ, // Any buffer read from shaders, indices and indirect
 		STORAGE_WRITE,
 		STORAGE_READ_WRITE,
+		SHADER_STORAGE_READ_WRITE, // Storage read and write from any shader stage, not only compute
 		COLOR_ATTACHMENT,
 		DEPTH_ATTACHMENT,
 		DEPTH_READ,

@@ -109,6 +109,11 @@ namespace renderer
 				return { Texture::Layout::GENERAL,
 						 vk::PipelineStageFlagBits2::eComputeShader,
 						 vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite };
+			case ResourceState::SHADER_STORAGE_READ_WRITE:
+				return { Texture::Layout::GENERAL,
+						 vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
+							 | vk::PipelineStageFlagBits2::eComputeShader,
+						 vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite };
 			case ResourceState::COLOR_ATTACHMENT:
 				return { Texture::Layout::COLOR_ATTACHMENT_OPTIMAL,
 						 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
