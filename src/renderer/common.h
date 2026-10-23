@@ -68,7 +68,8 @@ namespace renderer
 		COUNT
 	};
 
-	// Memory allocated through a Device, in bytes. BAR (device local and host visible memory) is also counted in VRAM.
+	// Memory allocated through a Device, in bytes. VRAM, BAR (device local and host visible) and RAM are disjoint, like the
+	// memory sizes in Device::Properties.
 	struct MemoryUsage
 	{
 		std::array<std::size_t, std::to_underlying( MemoryResource::COUNT )> resources { };
@@ -84,25 +85,13 @@ namespace renderer
 		void add( MemoryResource resource, VkMemoryPropertyFlags memory_flags, std::size_t size )
 		{
 			_resources[ std::to_underlying( resource ) ] += size;
-			const bool device_local = ( memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) != 0;
-			const bool host_visible = ( memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0;
-			( device_local ? _vram : _ram ) += size;
-			if ( device_local && host_visible )
-			{
-				_bar += size;
-			}
+			get_memory_total( memory_flags ) += size;
 		}
 
 		void remove( MemoryResource resource, VkMemoryPropertyFlags memory_flags, std::size_t size )
 		{
 			_resources[ std::to_underlying( resource ) ] -= size;
-			const bool device_local = ( memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) != 0;
-			const bool host_visible = ( memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0;
-			( device_local ? _vram : _ram ) -= size;
-			if ( device_local && host_visible )
-			{
-				_bar -= size;
-			}
+			get_memory_total( memory_flags ) -= size;
 		}
 
 		MemoryUsage get_usage() const
@@ -116,6 +105,15 @@ namespace renderer
 		}
 
 	private:
+		std::atomic<std::size_t>& get_memory_total( VkMemoryPropertyFlags memory_flags )
+		{
+			if ( ( memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) == 0 )
+			{
+				return _ram;
+			}
+			return ( memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0 ? _bar : _vram;
+		}
+
 		std::array<std::atomic<std::size_t>, std::to_underlying( MemoryResource::COUNT )> _resources { };
 		std::atomic<std::size_t> _vram = 0;
 		std::atomic<std::size_t> _bar = 0;
