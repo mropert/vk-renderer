@@ -91,6 +91,7 @@ namespace renderer
 
 			Buffer& operator=( Buffer&& rhs ) noexcept
 			{
+				_allocation.destroy( get_buffer() );
 				static_cast<renderer::Buffer&>( *this ) = static_cast<renderer::Buffer&>( rhs );
 				_allocation = rhs._allocation;
 				rhs.clear();

@@ -154,6 +154,7 @@ namespace renderer
 
 			Texture& operator=( Texture&& rhs ) noexcept
 			{
+				_allocation.destroy( _image );
 				static_cast<renderer::Texture&>( *this ) = static_cast<renderer::Texture&>( rhs );
 				_allocation = rhs._allocation;
 				rhs.clear();
@@ -204,6 +205,10 @@ namespace renderer
 
 			TextureView& operator=( TextureView&& rhs ) noexcept
 			{
+				if ( _view )
+				{
+					_device.destroyImageView( _view );
+				}
 				static_cast<renderer::TextureView&>( *this ) = static_cast<renderer::TextureView&>( rhs );
 				_device = rhs._device;
 				_dispatcher = rhs._dispatcher;
