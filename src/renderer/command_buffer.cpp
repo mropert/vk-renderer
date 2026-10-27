@@ -440,7 +440,7 @@ void renderer::CommandBuffer::write_timestamp( TimestampQuery query, uint32_t in
 {
 	if ( query )
 	{
-		_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllGraphics, query, index );
+		_cmd_buffer.writeTimestamp( vk::PipelineStageFlagBits::eAllCommands, query, index );
 	}
 }
 
