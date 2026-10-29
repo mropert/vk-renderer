@@ -18,6 +18,8 @@ namespace renderer
 	{
 		static constexpr uint32_t UNSET = static_cast<uint32_t>( -1 );
 		uint32_t index = UNSET;
+
+		explicit constexpr operator bool() const { return index != UNSET; }
 	};
 
 	using BindlessSampledTexture = BindlessHandle<SampledTextureView>;
