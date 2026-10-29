@@ -77,7 +77,10 @@ namespace renderer
 		Format get_format() const { return _desc.format; }
 		Usage get_usage() const { return _desc.usage; }
 		Extent2D get_extent() const { return _desc.extent; }
-		Extent2D get_extent( int mip ) const { return { _desc.extent.width >> mip, _desc.extent.height >> mip }; }
+		Extent2D get_extent( int mip ) const
+		{
+			return { std::max( _desc.extent.width >> mip, 1u ), std::max( _desc.extent.height >> mip, 1u ) };
+		}
 		int get_mips() const { return _desc.mips; }
 		int get_samples() const { return _desc.samples; }
 		int get_layers() const { return _desc.layers; }

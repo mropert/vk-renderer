@@ -58,6 +58,7 @@ namespace renderer::details
 	static_assert( get_mip_size( { .format = Texture::Format::BC7_UNORM, .extent = { 6, 6 } }, 0 ) == 64 );
 	static_assert( get_mip_size( { .format = Texture::Format::BC7_UNORM, .extent = { 12, 12 } }, 1 ) == 64 );
 	static_assert( get_mip_size( { .format = Texture::Format::BC7_UNORM, .extent = { 1024, 512 } }, 10 ) == 16 );
+	static_assert( get_mip_size( { .format = Texture::Format::R8G8B8A8_UNORM, .extent = { 6, 6 } }, 0 ) == 144 );
 }
 
 size_t renderer::Texture::Desc::get_mip_size( int mip ) const
