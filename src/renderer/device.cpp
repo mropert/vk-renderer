@@ -86,7 +86,7 @@ renderer::Device::Device( const char* appname )
 	const VkPhysicalDeviceVulkan11Features req_features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
 															.shaderDrawParameters = true };
 
-	const VkPhysicalDeviceFeatures req_features { .depthClamp = true, .depthBiasClamp = true };
+	const VkPhysicalDeviceFeatures req_features { .depthClamp = true, .depthBiasClamp = true, .textureCompressionBC = true };
 
 	auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
 								   .set_minimum_version( 1, 3 )

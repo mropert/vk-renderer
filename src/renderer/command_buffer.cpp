@@ -182,16 +182,22 @@ void renderer::CommandBuffer::copy_buffer( const Buffer& src,
 	_cmd_buffer.copyBuffer( src._buffer, dest._buffer, vk::BufferCopy { .srcOffset = offset, .dstOffset = dest_offset, .size = size } );
 }
 
-void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex )
+void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex, int mip )
 {
+	[[maybe_unused]] const auto block_size = Texture::get_texel_block_size( tex.get_format() );
+	assert( block_size != 0 && offset % block_size == 0 );
+	assert( mip < tex.get_mips() );
 	_cmd_buffer.copyBufferToImage(
 		buffer._buffer,
 		tex._image,
 		vk::ImageLayout::eTransferDstOptimal,
-		vk::BufferImageCopy {
-			.bufferOffset = offset,
-			.imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
-			.imageExtent = vk::Extent3D { .width = tex._desc.extent.width, .height = tex._desc.extent.height, .depth = 1 } } );
+		vk::BufferImageCopy { .bufferOffset = offset,
+							  .imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor,
+													.mipLevel = static_cast<uint32_t>( mip ),
+													.layerCount = 1 },
+							  .imageExtent = vk::Extent3D { .width = std::max( tex._desc.extent.width >> mip, 1u ),
+															.height = std::max( tex._desc.extent.height >> mip, 1u ),
+															.depth = 1 } } );
 }
 
 void renderer::CommandBuffer::fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value )

@@ -80,7 +80,8 @@ namespace renderer
 		void blit_texture( const Texture& src, const Texture& dst, int src_mip = 0, int dst_mip = 0, bool linear_filter = false );
 
 		void copy_buffer( const Buffer& src, std::size_t offset, std::size_t size, const Buffer& dest, std::size_t dest_offset = 0 );
-		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex );
+		// offset must be a multiple of the texel block size (16 bytes for BC7)
+		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex, int mip = 0 );
 		void fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value );
 		void buffer_barrier( const Buffer& buffer, ResourceState src, ResourceState dst );
 

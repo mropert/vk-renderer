@@ -25,10 +25,14 @@ namespace renderer
 			R8G8B8A8_SRGB = std::to_underlying( vk::Format::eR8G8B8A8Srgb ),
 			B8G8R8A8_UNORM = std::to_underlying( vk::Format::eB8G8R8A8Unorm ),
 			B8G8R8A8_SRGB = std::to_underlying( vk::Format::eB8G8R8A8Srgb ),
+			B5G6R5_UNORM = std::to_underlying( vk::Format::eB5G6R5UnormPack16 ),
+			B5G5R5A1_UNORM = std::to_underlying( vk::Format::eB5G5R5A1UnormPack16 ),
 			R16G16B16A16_SFLOAT = std::to_underlying( vk::Format::eR16G16B16A16Sfloat ),
 			R32_SFLOAT = std::to_underlying( vk::Format::eR32Sfloat ),
 			D16_UNORM = std::to_underlying( vk::Format::eD16Unorm ),
-			D32_SFLOAT = std::to_underlying( vk::Format::eD32Sfloat )
+			D32_SFLOAT = std::to_underlying( vk::Format::eD32Sfloat ),
+			BC7_UNORM = std::to_underlying( vk::Format::eBc7UnormBlock ),
+			BC7_SRGB = std::to_underlying( vk::Format::eBc7SrgbBlock )
 		};
 
 		enum class Layout : std::underlying_type_t<vk::ImageLayout>
@@ -75,7 +79,8 @@ namespace renderer
 		int get_samples() const { return _desc.samples; }
 		int get_layers() const { return _desc.layers; }
 
-		static std::size_t get_bpp( Format format );
+		// Bytes per texel, or per block of texels for block compressed formats (4x4 texels for BC7)
+		static std::size_t get_texel_block_size( Format format );
 		static bool is_depth_format( Format format );
 
 	protected:
