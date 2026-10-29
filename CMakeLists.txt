@@ -17,10 +17,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 endif() 
 
 if(MSVC)
-	add_compile_options(/Zi /MP /W4 /WX)
+	# C5262: implicit switch fall-through, off by default even at /W4
+	add_compile_options(/Zi /MP /W4 /w15262 /WX)
 	add_link_options(/DEBUG)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-	add_compile_options(-W -Wall -Werror)
+	add_compile_options(-W -Wall -Wimplicit-fallthrough -Werror)
 endif()
 
 find_package(SDL3 CONFIG REQUIRED)
