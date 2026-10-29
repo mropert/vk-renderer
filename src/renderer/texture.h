@@ -67,6 +67,9 @@ namespace renderer
 			int mips = 1;
 			int samples = 1;
 			int layers = 1;
+
+			size_t get_mip_size( int mip ) const;
+			size_t get_size() const;
 		};
 
 		Texture() = default;
@@ -79,8 +82,12 @@ namespace renderer
 		int get_samples() const { return _desc.samples; }
 		int get_layers() const { return _desc.layers; }
 
+		size_t get_mip_size( int mip ) const { return _desc.get_mip_size( mip ); }
+
 		// Bytes per texel, or per block of texels for block compressed formats (4x4 texels for BC7)
-		static std::size_t get_texel_block_size( Format format );
+		static size_t get_texel_block_size( Format format );
+		// Texels per block side (4 for block compressed formats, 1 otherwise)
+		static size_t get_texel_block_extent( Format format );
 		static bool is_depth_format( Format format );
 
 	protected:
