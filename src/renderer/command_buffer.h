@@ -38,9 +38,19 @@ namespace renderer
 
 	struct RenderAttachment
 	{
+		// Depth only supports SAMPLE_ZERO everywhere, the other modes depend on the device
+		enum class ResolveMode : std::underlying_type_t<vk::ResolveModeFlagBits>
+		{
+			SAMPLE_ZERO = std::to_underlying( vk::ResolveModeFlagBits::eSampleZero ),
+			AVERAGE = std::to_underlying( vk::ResolveModeFlagBits::eAverage ),
+			MIN = std::to_underlying( vk::ResolveModeFlagBits::eMin ),
+			MAX = std::to_underlying( vk::ResolveModeFlagBits::eMax )
+		};
+
 		TextureView target;
 		TextureView resolve_target;
 		std::optional<std::array<float, 4>> clear_value;
+		ResolveMode resolve_mode = ResolveMode::AVERAGE;
 	};
 
 	struct RenderInfo

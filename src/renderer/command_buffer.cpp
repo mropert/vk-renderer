@@ -266,7 +266,7 @@ void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 
 		if ( info.color_target.resolve_target._view )
 		{
-			color_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
+			color_attachment.resolveMode = static_cast<vk::ResolveModeFlagBits>( info.color_target.resolve_mode );
 			color_attachment.resolveImageView = info.color_target.resolve_target._view;
 			color_attachment.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
 		}
@@ -295,7 +295,7 @@ void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 		}
 		if ( info.depth_target.resolve_target._view )
 		{
-			depth_attachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
+			depth_attachment.resolveMode = static_cast<vk::ResolveModeFlagBits>( info.depth_target.resolve_mode );
 			depth_attachment.resolveImageView = info.depth_target.resolve_target._view;
 			depth_attachment.resolveImageLayout = vk::ImageLayout::eDepthAttachmentOptimal;
 		}
