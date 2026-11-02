@@ -122,6 +122,10 @@ namespace renderer
 				return { Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL,
 						 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
 						 vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite };
+			case ResourceState::DEPTH_RESOLVE_ATTACHMENT:
+				return { Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL,
+						 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+						 vk::AccessFlagBits2::eColorAttachmentWrite };
 			case ResourceState::DEPTH_READ:
 				return { Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL,
 						 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,

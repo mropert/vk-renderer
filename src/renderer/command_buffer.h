@@ -29,6 +29,7 @@ namespace renderer
 		SHADER_STORAGE_READ_WRITE, // Storage read and write from any shader stage, not only compute
 		COLOR_ATTACHMENT,
 		DEPTH_ATTACHMENT,
+		DEPTH_RESOLVE_ATTACHMENT, // Resolving depth as part of the render pass, which in Vulkan is neither a depth attach nor a transfer
 		DEPTH_READ,
 		TRANSFER_SRC,
 		TRANSFER_DST,
