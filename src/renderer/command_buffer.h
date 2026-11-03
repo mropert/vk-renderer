@@ -12,30 +12,33 @@ namespace renderer
 	class Buffer;
 	class TextureView;
 
-	// Simplified stage + access fold for most common barriers, inspired by D3D12_RESOURCE_STATE
-	enum class ResourceState
+	// Barriers derive memory accesses from the stages: producers make all the writes of their stages available, consumers
+	// get them visible to all the reads and writes of theirs
+	enum class Stage : uint32_t
 	{
-		UNDEFINED,
-		INDIRECT_ARGUMENT,
-		INDEX_READ,
-		VERTEX_SHADER_READ, // Includes geometry and mesh shaders
-		FRAGMENT_SHADER_READ,
-		COMPUTE_SHADER_READ,
-		SHADER_READ,
-		STORAGE_READ,
-		ANY_BUFFER_READ, // Any buffer read from shaders, indices and indirect
-		STORAGE_WRITE,
-		STORAGE_READ_WRITE,
-		SHADER_STORAGE_READ_WRITE, // Storage read and write from any shader stage, not only compute
-		COLOR_ATTACHMENT,
-		DEPTH_ATTACHMENT,
-		DEPTH_RESOLVE_ATTACHMENT, // Resolving depth as part of the render pass, which in Vulkan is neither a depth attach nor a transfer
-		DEPTH_READ,
-		TRANSFER_SRC,
-		TRANSFER_DST,
-		PRESENT,
-		HOST_READ
+		NONE = 0,
+		INDIRECT = 1 << 0,
+		INDEX = 1 << 1,
+		VERTEX = 1 << 2, // All pre-rasterization shaders: vertex, task and mesh
+		FRAGMENT = 1 << 3,
+		DEPTH = 1 << 4, // Early and late fragment tests
+		COLOR = 1 << 5, // Color attachment output, which is also where MSAA resolves happen, depth included
+		COMPUTE = 1 << 6,
+		TRANSFER = 1 << 7,
+		HOST = 1 << 8,
+		ANY_SHADER = VERTEX | FRAGMENT | COMPUTE,
+		ALL = INDIRECT | INDEX | ANY_SHADER | DEPTH | COLOR | TRANSFER | HOST
 	};
+
+	inline constexpr Stage operator|( Stage lhs, Stage rhs )
+	{
+		return Stage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
+	}
+
+	inline constexpr Stage operator&( Stage lhs, Stage rhs )
+	{
+		return Stage( std::to_underlying( lhs ) & std::to_underlying( rhs ) );
+	}
 
 	struct RenderAttachment
 	{
@@ -87,16 +90,19 @@ namespace renderer
 		void end();
 		void reset();
 
-		void texture_barrier( const Texture& tex, ResourceState src, ResourceState dst, int mip_level = -1 );
+		// Images live in GENERAL, one side of the transition must be GENERAL. Coming from UNDEFINED or PRESENT_SRC
+		// discards the content. Leaving PRESENT_SRC only syncs rendering and transfers with the swapchain acquire, other
+		// uses need a barrier from COLOR after it (eg: compute writes).
+		void transition_texture( const Texture& tex, Texture::Layout from, Texture::Layout to );
+		// Global memory barrier, covers all buffers and textures
+		void barrier( Stage producers, Stage consumers );
+
 		void blit_texture( const Texture& src, const Texture& dst, int src_mip = 0, int dst_mip = 0, bool linear_filter = false );
 
 		void copy_buffer( const Buffer& src, std::size_t offset, std::size_t size, const Buffer& dest, std::size_t dest_offset = 0 );
 		// offset must be a multiple of the texel block size (16 bytes for BC7)
 		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex, int mip = 0 );
 		void fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value );
-		void buffer_barrier( const Buffer& buffer, ResourceState src, ResourceState dst );
-
-		void memory_barrier( ResourceState src, ResourceState dst );
 
 		void begin_rendering( RenderInfo info );
 		void end_rendering();
@@ -163,22 +169,6 @@ namespace renderer
 			, _debug_labels_support( debug_labels_support )
 		{
 		}
-
-		// Lower level barriers aren't exposed for now, until we find a use case for them
-		void texture_barrier( const Texture& tex,
-							  Texture::Layout src_layout,
-							  Texture::Layout dst_layout,
-							  vk::PipelineStageFlags2 src_stage,
-							  vk::PipelineStageFlags2 dst_stage,
-							  vk::AccessFlags2 src_access,
-							  vk::AccessFlags2 dst_access,
-							  int mip_level = -1 );
-
-		void buffer_barrier( const Buffer& buffer,
-							 vk::PipelineStageFlags2 src_stage,
-							 vk::PipelineStageFlags2 dst_stage,
-							 vk::AccessFlags2 src_access,
-							 vk::AccessFlags2 dst_access );
 
 		void push_constants( const Pipeline& pipeline, const void* data, std::size_t size );
 

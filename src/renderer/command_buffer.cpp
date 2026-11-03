@@ -30,131 +30,133 @@ void renderer::CommandBuffer::reset()
 	_cmd_buffer.reset();
 }
 
-void renderer::CommandBuffer::texture_barrier( const Texture& tex,
-											   Texture::Layout src_layout,
-											   Texture::Layout dst_layout,
-											   vk::PipelineStageFlags2 src_stage,
-											   vk::PipelineStageFlags2 dst_stage,
-											   vk::AccessFlags2 src_access,
-											   vk::AccessFlags2 dst_access,
-											   int mip_level )
-{
-	assert( mip_level == -1 || mip_level < tex.get_mips() );
-
-	const vk::ImageAspectFlags aspectMask = Texture::is_depth_format( tex.get_format() ) ? vk::ImageAspectFlagBits::eDepth
-																						 : vk::ImageAspectFlagBits::eColor;
-	const vk::ImageMemoryBarrier2 imageBarrier { .srcStageMask = src_stage,
-												 .srcAccessMask = src_access,
-												 .dstStageMask = dst_stage,
-												 .dstAccessMask = dst_access,
-												 .oldLayout = static_cast<vk::ImageLayout>( src_layout ),
-												 .newLayout = static_cast<vk::ImageLayout>( dst_layout ),
-												 .image = tex._image,
-												 .subresourceRange = {
-													 .aspectMask = aspectMask,
-													 .baseMipLevel = static_cast<uint32_t>( mip_level == -1 ? 0 : mip_level ),
-													 .levelCount = mip_level == -1 ? VK_REMAINING_MIP_LEVELS : 1,
-													 .layerCount = VK_REMAINING_ARRAY_LAYERS,
-												 } };
-
-	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &imageBarrier } );
-}
-
 namespace renderer
 {
-	struct BarrierState
+	struct BarrierScope
 	{
-		vk::PipelineStageFlags2 stage;
+		vk::PipelineStageFlags2 stages;
 		vk::AccessFlags2 access;
 	};
-	constexpr BarrierState resource_state_to_barrier_state( ResourceState state )
+
+	struct StageInfo
 	{
-		switch ( state )
+		Stage stage;
+		vk::PipelineStageFlags2 vk_stages;
+		vk::AccessFlags2 writes;
+		vk::AccessFlags2 reads;
+	};
+
+	constexpr StageInfo stage_infos[] = {
+		{ Stage::INDIRECT, vk::PipelineStageFlagBits2::eDrawIndirect, { }, vk::AccessFlagBits2::eIndirectCommandRead },
+		{ Stage::INDEX, vk::PipelineStageFlagBits2::eIndexInput, { }, vk::AccessFlagBits2::eIndexRead },
+		{ Stage::VERTEX,
+		  vk::PipelineStageFlagBits2::ePreRasterizationShaders,
+		  vk::AccessFlagBits2::eShaderWrite,
+		  vk::AccessFlagBits2::eShaderRead },
+		{ Stage::FRAGMENT,
+		  vk::PipelineStageFlagBits2::eFragmentShader,
+		  vk::AccessFlagBits2::eShaderWrite,
+		  vk::AccessFlagBits2::eShaderRead },
+		{ Stage::DEPTH,
+		  vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+		  vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+		  vk::AccessFlagBits2::eDepthStencilAttachmentRead },
+		{ Stage::COLOR,
+		  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+		  vk::AccessFlagBits2::eColorAttachmentWrite,
+		  vk::AccessFlagBits2::eColorAttachmentRead },
+		{ Stage::COMPUTE, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::AccessFlagBits2::eShaderRead },
+		{ Stage::TRANSFER,
+		  vk::PipelineStageFlagBits2::eAllTransfer,
+		  vk::AccessFlagBits2::eTransferWrite,
+		  vk::AccessFlagBits2::eTransferRead },
+		{ Stage::HOST, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostWrite, vk::AccessFlagBits2::eHostRead },
+	};
+
+	// Reads never need to be made available, a write-after-read only needs the execution dependency
+	BarrierScope producer_scope( Stage stages )
+	{
+		BarrierScope scope;
+		for ( const auto& info : stage_infos )
 		{
-			case ResourceState::UNDEFINED:
-				return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
-			case ResourceState::INDIRECT_ARGUMENT:
-				return { vk::PipelineStageFlagBits2::eDrawIndirect, vk::AccessFlagBits2::eIndirectCommandRead };
-			case ResourceState::INDEX_READ:
-				return { vk::PipelineStageFlagBits2::eIndexInput, vk::AccessFlagBits2::eIndexRead };
-			case ResourceState::VERTEX_SHADER_READ:
-				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders, vk::AccessFlagBits2::eShaderRead };
-			case ResourceState::FRAGMENT_SHADER_READ:
-				return { vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead };
-			case ResourceState::COMPUTE_SHADER_READ:
-				return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead };
-			case ResourceState::SHADER_READ:
-				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
-							 | vk::PipelineStageFlagBits2::eComputeShader,
-						 vk::AccessFlagBits2::eShaderRead };
-			case ResourceState::STORAGE_READ:
-				return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageRead };
-			case ResourceState::ANY_BUFFER_READ:
-				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
-							 | vk::PipelineStageFlagBits2::eComputeShader | vk::PipelineStageFlagBits2::eDrawIndirect
-							 | vk::PipelineStageFlagBits2::eIndexInput,
-						 vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eIndirectCommandRead | vk::AccessFlagBits2::eIndexRead };
-			case ResourceState::STORAGE_WRITE:
-				return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite };
-			case ResourceState::STORAGE_READ_WRITE:
-				return { vk::PipelineStageFlagBits2::eComputeShader,
-						 vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite };
-			case ResourceState::SHADER_STORAGE_READ_WRITE:
-				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
-							 | vk::PipelineStageFlagBits2::eComputeShader,
-						 vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite };
-			case ResourceState::COLOR_ATTACHMENT:
-				return { vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-						 vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite };
-			case ResourceState::DEPTH_ATTACHMENT:
-				return { vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-						 vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite };
-			case ResourceState::DEPTH_RESOLVE_ATTACHMENT:
-				return { vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite };
-			case ResourceState::DEPTH_READ:
-				return { vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-						 vk::AccessFlagBits2::eDepthStencilAttachmentRead };
-			case ResourceState::TRANSFER_SRC:
-				return { vk::PipelineStageFlagBits2::eAllTransfer, vk::AccessFlagBits2::eTransferRead };
-			case ResourceState::TRANSFER_DST:
-				return { vk::PipelineStageFlagBits2::eAllTransfer, vk::AccessFlagBits2::eTransferWrite };
-			case ResourceState::PRESENT:
-				return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
-			case ResourceState::HOST_READ:
-				return { vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead };
+			if ( ( stages & info.stage ) != Stage::NONE )
+			{
+				scope.stages |= info.vk_stages;
+				scope.access |= info.writes;
+			}
 		}
-		// Shouldn't happen but MSVC will throw warning 4715 because they don't analyze enum class control paths
-		return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
+		return scope;
+	}
+
+	BarrierScope consumer_scope( Stage stages )
+	{
+		BarrierScope scope;
+		for ( const auto& info : stage_infos )
+		{
+			if ( ( stages & info.stage ) != Stage::NONE )
+			{
+				scope.stages |= info.vk_stages;
+				scope.access |= info.writes | info.reads;
+			}
+		}
+		return scope;
+	}
+
+	// The acquire semaphore waits at color attachment output, and the submit semaphore signals after it
+	constexpr BarrierScope present_scope { vk::PipelineStageFlagBits2::eColorAttachmentOutput, { } };
+}
+
+void renderer::CommandBuffer::transition_texture( const Texture& tex, Texture::Layout from, Texture::Layout to )
+{
+	assert( to != Texture::Layout::UNDEFINED );
+	assert( ( from == Texture::Layout::GENERAL ) != ( to == Texture::Layout::GENERAL ) );
+
+	BarrierScope src;
+	BarrierScope dst;
+	if ( from == Texture::Layout::UNDEFINED )
+	{
+		dst = consumer_scope( Stage::ALL );
+	}
+	else if ( from == Texture::Layout::PRESENT_SRC )
+	{
+		// Waiting for the acquire on all stages would stall the work that doesn't touch the swapchain image
+		src = present_scope;
+		dst = consumer_scope( Stage::COLOR | Stage::TRANSFER );
+	}
+	else
+	{
+		src = producer_scope( Stage::ALL );
+		dst = present_scope;
 	}
 
 	// GENERAL is as fast as the dedicated layouts with VK_KHR_unified_image_layouts. Without it, some older GPUs lose
 	// a bit of compression (eg: MSAA color on AMD before RDNA3), which we accept to avoid tracking layouts.
-	constexpr Texture::Layout resource_state_to_layout( ResourceState state )
-	{
-		switch ( state )
-		{
-			case ResourceState::UNDEFINED:
-				return Texture::Layout::UNDEFINED;
-			case ResourceState::PRESENT:
-				return Texture::Layout::PRESENT_SRC;
-			default:
-				return Texture::Layout::GENERAL;
-		}
-	}
+	// Leaving PRESENT_SRC goes from UNDEFINED, which also covers swapchain images that were never presented.
+	const vk::ImageMemoryBarrier2 barrier {
+		.srcStageMask = src.stages,
+		.srcAccessMask = src.access,
+		.dstStageMask = dst.stages,
+		.dstAccessMask = dst.access,
+		.oldLayout = from == Texture::Layout::GENERAL ? vk::ImageLayout::eGeneral : vk::ImageLayout::eUndefined,
+		.newLayout = static_cast<vk::ImageLayout>( to ),
+		.image = tex._image,
+		.subresourceRange = { .aspectMask = Texture::is_depth_format( tex.get_format() ) ? vk::ImageAspectFlagBits::eDepth
+																						 : vk::ImageAspectFlagBits::eColor,
+							  .levelCount = VK_REMAINING_MIP_LEVELS,
+							  .layerCount = VK_REMAINING_ARRAY_LAYERS }
+	};
+	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrier } );
 }
 
-void renderer::CommandBuffer::texture_barrier( const Texture& tex, ResourceState from, ResourceState to, int mip_level )
+void renderer::CommandBuffer::barrier( Stage producers, Stage consumers )
 {
-	const auto src = resource_state_to_barrier_state( from );
-	const auto dst = resource_state_to_barrier_state( to );
-	texture_barrier( tex,
-					 resource_state_to_layout( from ),
-					 resource_state_to_layout( to ),
-					 src.stage,
-					 dst.stage,
-					 src.access,
-					 dst.access,
-					 mip_level );
+	const auto src = producer_scope( producers );
+	const auto dst = consumer_scope( consumers );
+	const vk::MemoryBarrier2 barrier { .srcStageMask = src.stages,
+									   .srcAccessMask = src.access,
+									   .dstStageMask = dst.stages,
+									   .dstAccessMask = dst.access };
+	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .memoryBarrierCount = 1, .pMemoryBarriers = &barrier } );
 }
 
 void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst, int src_mip, int dst_mip, bool linear_filter )
@@ -210,41 +212,6 @@ void renderer::CommandBuffer::fill_buffer( const Buffer& buffer, size_t offset, 
 {
 	assert( offset + size <= buffer.get_size() );
 	_cmd_buffer.fillBuffer( buffer.get_buffer(), offset, size, value );
-}
-
-void renderer::CommandBuffer::buffer_barrier( const Buffer& buffer, ResourceState from, ResourceState to )
-{
-	const auto src = resource_state_to_barrier_state( from );
-	const auto dst = resource_state_to_barrier_state( to );
-	buffer_barrier( buffer, src.stage, dst.stage, src.access, dst.access );
-}
-
-void renderer::CommandBuffer::buffer_barrier( const Buffer& buffer,
-											  vk::PipelineStageFlags2 src_stage,
-											  vk::PipelineStageFlags2 dst_stage,
-											  vk::AccessFlags2 src_access,
-											  vk::AccessFlags2 dst_access )
-{
-	const vk::BufferMemoryBarrier2 bufferBarrier { .srcStageMask = src_stage,
-												   .srcAccessMask = src_access,
-												   .dstStageMask = dst_stage,
-												   .dstAccessMask = dst_access,
-												   .buffer = buffer.get_buffer(),
-												   .offset = 0,
-												   .size = buffer.get_size() };
-
-	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &bufferBarrier } );
-}
-
-void renderer::CommandBuffer::memory_barrier( ResourceState from, ResourceState to )
-{
-	const auto src = resource_state_to_barrier_state( from );
-	const auto dst = resource_state_to_barrier_state( to );
-	const vk::MemoryBarrier2 barrier { .srcStageMask = src.stage,
-									   .srcAccessMask = src.access,
-									   .dstStageMask = dst.stage,
-									   .dstAccessMask = dst.access };
-	_cmd_buffer.pipelineBarrier2( vk::DependencyInfo { .memoryBarrierCount = 1, .pMemoryBarriers = &barrier } );
 }
 
 void renderer::CommandBuffer::begin_rendering( RenderInfo info )
