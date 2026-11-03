@@ -30,12 +30,12 @@ namespace renderer
 		ALL = INDIRECT | INDEX | ANY_SHADER | DEPTH | COLOR | TRANSFER | HOST
 	};
 
-	inline constexpr Stage operator|( Stage lhs, Stage rhs )
+	constexpr Stage operator|( Stage lhs, Stage rhs )
 	{
 		return Stage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
 	}
 
-	inline constexpr Stage operator&( Stage lhs, Stage rhs )
+	constexpr Stage operator&( Stage lhs, Stage rhs )
 	{
 		return Stage( std::to_underlying( lhs ) & std::to_underlying( rhs ) );
 	}

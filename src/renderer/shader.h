@@ -13,7 +13,7 @@ namespace renderer
 		MESH = std::to_underlying( vk::ShaderStageFlagBits::eMeshEXT )
 	};
 
-	inline constexpr ShaderStage operator|( ShaderStage lhs, ShaderStage rhs )
+	constexpr ShaderStage operator|( ShaderStage lhs, ShaderStage rhs )
 	{
 		return ShaderStage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
 	}

@@ -74,9 +74,9 @@ namespace renderer
 	};
 
 	// Reads never need to be made available, a write-after-read only needs the execution dependency
-	BarrierScope producer_scope( Stage stages )
+	constexpr BarrierScope producer_scope( Stage stages )
 	{
-		BarrierScope scope;
+		BarrierScope scope { };
 		for ( const auto& info : stage_infos )
 		{
 			if ( ( stages & info.stage ) != Stage::NONE )
@@ -88,9 +88,9 @@ namespace renderer
 		return scope;
 	}
 
-	BarrierScope consumer_scope( Stage stages )
+	constexpr BarrierScope consumer_scope( Stage stages )
 	{
-		BarrierScope scope;
+		BarrierScope scope { };
 		for ( const auto& info : stage_infos )
 		{
 			if ( ( stages & info.stage ) != Stage::NONE )

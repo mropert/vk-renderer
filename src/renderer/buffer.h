@@ -63,11 +63,11 @@ namespace renderer
 		friend class Device;
 	};
 
-	inline constexpr Buffer::Usage operator|( Buffer::Usage lhs, Buffer::Usage rhs )
+	constexpr Buffer::Usage operator|( Buffer::Usage lhs, Buffer::Usage rhs )
 	{
 		return Buffer::Usage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
 	}
-	inline constexpr Buffer::Usage operator&( Buffer::Usage lhs, Buffer::Usage rhs )
+	constexpr Buffer::Usage operator&( Buffer::Usage lhs, Buffer::Usage rhs )
 	{
 		return Buffer::Usage( std::to_underlying( lhs ) & std::to_underlying( rhs ) );
 	}

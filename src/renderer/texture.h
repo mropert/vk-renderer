@@ -105,12 +105,12 @@ namespace renderer
 		friend class Swapchain;
 	};
 
-	inline constexpr Texture::Usage operator|( Texture::Usage lhs, Texture::Usage rhs )
+	constexpr Texture::Usage operator|( Texture::Usage lhs, Texture::Usage rhs )
 	{
 		return Texture::Usage( std::to_underlying( lhs ) | std::to_underlying( rhs ) );
 	}
 
-	inline constexpr Texture::Usage operator&( Texture::Usage lhs, Texture::Usage rhs )
+	constexpr Texture::Usage operator&( Texture::Usage lhs, Texture::Usage rhs )
 	{
 		return Texture::Usage( std::to_underlying( lhs ) & std::to_underlying( rhs ) );
 	}
