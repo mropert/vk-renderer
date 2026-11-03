@@ -158,6 +158,7 @@ renderer::Device::Device( const char* appname )
 
 	_command_pool = _device.createCommandPool( vk::CommandPoolCreateInfo { .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 																		   .queueFamilyIndex = _gfx_queue_family_index } );
+	_submit_and_wait_fence = create_fence();
 
 	auto buffers = _device.allocateCommandBuffers( vk::CommandBufferAllocateInfo { .commandPool = _command_pool,
 																				   .level = vk::CommandBufferLevel::ePrimary,
@@ -472,6 +473,14 @@ void renderer::Device::submit( CommandBuffer& buffer, vk::Fence signal_fence )
 	PROFILER_SCOPE();
 	const vk::CommandBufferSubmitInfo info { .commandBuffer = buffer._cmd_buffer };
 	_gfx_queue.submit2( vk::SubmitInfo2 { .commandBufferInfoCount = 1, .pCommandBufferInfos = &info }, signal_fence );
+}
+
+void renderer::Device::submit_and_wait( CommandBuffer& buffer )
+{
+	PROFILER_SCOPE();
+	submit( buffer, _submit_and_wait_fence );
+	wait_for_fences( { *_submit_and_wait_fence }, UINT64_MAX );
+	reset_fences( { *_submit_and_wait_fence } );
 }
 
 renderer::raii::TimestampQuery renderer::Device::create_timestamp_query( uint32_t size )

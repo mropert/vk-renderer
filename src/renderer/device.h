@@ -70,6 +70,8 @@ namespace renderer
 		void reset_fences( std::initializer_list<Fence> fences ) { reset_fences( std::span( begin( fences ), fences.size() ) ); }
 
 		void submit( CommandBuffer& buffer, Fence signal_fence );
+		// Blocks until the GPU is done executing it, meant for one time setup only
+		void submit_and_wait( CommandBuffer& buffer );
 
 		raii::TimestampQuery create_timestamp_query( uint32_t size );
 		void get_query_results( TimestampQuery query, uint32_t first_index, std::span<uint64_t> results ); // no-op on nil query
@@ -140,6 +142,7 @@ namespace renderer
 		vma::raii::Allocator _allocator;
 		MemoryTracker _memory_tracker;
 		vk::raii::CommandPool _command_pool = nullptr;
+		raii::Fence _submit_and_wait_fence = nullptr;
 		std::vector<CommandBuffer> _command_buffers;
 		std::queue<CommandBuffer*> _available_command_buffers;
 		std::array<std::vector<raii::Pipeline>, MAX_FRAMES_IN_FLIGHT> _delete_queue;
