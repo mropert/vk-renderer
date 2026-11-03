@@ -35,16 +35,11 @@ namespace renderer
 			BC7_SRGB = std::to_underlying( vk::Format::eBc7SrgbBlock )
 		};
 
+		// Images live in GENERAL, the others are only for first use and presentation
 		enum class Layout : std::underlying_type_t<vk::ImageLayout>
 		{
 			UNDEFINED = std::to_underlying( vk::ImageLayout::eUndefined ),
 			GENERAL = std::to_underlying( vk::ImageLayout::eGeneral ),
-			COLOR_ATTACHMENT_OPTIMAL = std::to_underlying( vk::ImageLayout::eColorAttachmentOptimal ),
-			DEPTH_ATTACHMENT_OPTIMAL = std::to_underlying( vk::ImageLayout::eDepthAttachmentOptimal ),
-			DEPTH_READ_ONLY_OPTIMAL = std::to_underlying( vk::ImageLayout::eDepthReadOnlyOptimal ),
-			SHADER_READ_ONLY_OPTIMAL = std::to_underlying( vk::ImageLayout::eShaderReadOnlyOptimal ),
-			TRANSFER_SRC_OPTIMAL = std::to_underlying( vk::ImageLayout::eTransferSrcOptimal ),
-			TRANSFER_DST_OPTIMAL = std::to_underlying( vk::ImageLayout::eTransferDstOptimal ),
 			PRESENT_SRC = std::to_underlying( vk::ImageLayout::ePresentSrcKHR )
 		};
 

@@ -116,6 +116,12 @@ renderer::Device::Device( const char* appname )
 		vk::PhysicalDeviceVulkan12Features { .drawIndirectCount = true } );
 	_properties.minmax_filter_support = physical_device_ret.value().enable_extension_features_if_present(
 		vk::PhysicalDeviceVulkan12Features { .samplerFilterMinmax = true } );
+	// We use GENERAL for all images regardless, this only guarantees there's no performance penalty
+	if ( physical_device_ret->enable_extension_if_present( VK_KHR_UNIFIED_IMAGE_LAYOUTS_EXTENSION_NAME ) )
+	{
+		physical_device_ret.value().enable_extension_features_if_present(
+			vk::PhysicalDeviceUnifiedImageLayoutsFeaturesKHR { .unifiedImageLayouts = true } );
+	}
 
 	vkb::DeviceBuilder device_builder( physical_device_ret.value() );
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_feature { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,

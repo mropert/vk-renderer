@@ -64,7 +64,6 @@ namespace renderer
 {
 	struct BarrierState
 	{
-		Texture::Layout layout;
 		vk::PipelineStageFlags2 stage;
 		vk::AccessFlags2 access;
 	};
@@ -73,78 +72,74 @@ namespace renderer
 		switch ( state )
 		{
 			case ResourceState::UNDEFINED:
-				return { Texture::Layout::UNDEFINED, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
+				return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
 			case ResourceState::INDIRECT_ARGUMENT:
-				return { Texture::Layout::UNDEFINED, vk::PipelineStageFlagBits2::eDrawIndirect, vk::AccessFlagBits2::eIndirectCommandRead };
+				return { vk::PipelineStageFlagBits2::eDrawIndirect, vk::AccessFlagBits2::eIndirectCommandRead };
 			case ResourceState::INDEX_READ:
-				return { Texture::Layout::UNDEFINED, vk::PipelineStageFlagBits2::eIndexInput, vk::AccessFlagBits2::eIndexRead };
+				return { vk::PipelineStageFlagBits2::eIndexInput, vk::AccessFlagBits2::eIndexRead };
 			case ResourceState::VERTEX_SHADER_READ:
-				return { Texture::Layout::SHADER_READ_ONLY_OPTIMAL,
-						 vk::PipelineStageFlagBits2::ePreRasterizationShaders,
-						 vk::AccessFlagBits2::eShaderRead };
+				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders, vk::AccessFlagBits2::eShaderRead };
 			case ResourceState::FRAGMENT_SHADER_READ:
-				return { Texture::Layout::SHADER_READ_ONLY_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eFragmentShader,
-						 vk::AccessFlagBits2::eShaderRead };
+				return { vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead };
 			case ResourceState::COMPUTE_SHADER_READ:
-				return { Texture::Layout::SHADER_READ_ONLY_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eComputeShader,
-						 vk::AccessFlagBits2::eShaderRead };
+				return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead };
 			case ResourceState::SHADER_READ:
-				return { Texture::Layout::SHADER_READ_ONLY_OPTIMAL,
-						 vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
+				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
 							 | vk::PipelineStageFlagBits2::eComputeShader,
 						 vk::AccessFlagBits2::eShaderRead };
 			case ResourceState::STORAGE_READ:
-				return { Texture::Layout::GENERAL, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageRead };
+				return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageRead };
 			case ResourceState::ANY_BUFFER_READ:
-				return { Texture::Layout::GENERAL,
-						 vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
+				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
 							 | vk::PipelineStageFlagBits2::eComputeShader | vk::PipelineStageFlagBits2::eDrawIndirect
 							 | vk::PipelineStageFlagBits2::eIndexInput,
 						 vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eIndirectCommandRead | vk::AccessFlagBits2::eIndexRead };
 			case ResourceState::STORAGE_WRITE:
-				return { Texture::Layout::GENERAL, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite };
+				return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite };
 			case ResourceState::STORAGE_READ_WRITE:
-				return { Texture::Layout::GENERAL,
-						 vk::PipelineStageFlagBits2::eComputeShader,
+				return { vk::PipelineStageFlagBits2::eComputeShader,
 						 vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite };
 			case ResourceState::SHADER_STORAGE_READ_WRITE:
-				return { Texture::Layout::GENERAL,
-						 vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
+				return { vk::PipelineStageFlagBits2::ePreRasterizationShaders | vk::PipelineStageFlagBits2::eFragmentShader
 							 | vk::PipelineStageFlagBits2::eComputeShader,
 						 vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite };
 			case ResourceState::COLOR_ATTACHMENT:
-				return { Texture::Layout::COLOR_ATTACHMENT_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+				return { vk::PipelineStageFlagBits2::eColorAttachmentOutput,
 						 vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite };
 			case ResourceState::DEPTH_ATTACHMENT:
-				return { Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+				return { vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
 						 vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite };
 			case ResourceState::DEPTH_RESOLVE_ATTACHMENT:
-				return { Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-						 vk::AccessFlagBits2::eColorAttachmentWrite };
+				return { vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite };
 			case ResourceState::DEPTH_READ:
-				return { Texture::Layout::DEPTH_ATTACHMENT_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+				return { vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
 						 vk::AccessFlagBits2::eDepthStencilAttachmentRead };
 			case ResourceState::TRANSFER_SRC:
-				return { Texture::Layout::TRANSFER_SRC_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eAllTransfer,
-						 vk::AccessFlagBits2::eTransferRead };
+				return { vk::PipelineStageFlagBits2::eAllTransfer, vk::AccessFlagBits2::eTransferRead };
 			case ResourceState::TRANSFER_DST:
-				return { Texture::Layout::TRANSFER_DST_OPTIMAL,
-						 vk::PipelineStageFlagBits2::eAllTransfer,
-						 vk::AccessFlagBits2::eTransferWrite };
+				return { vk::PipelineStageFlagBits2::eAllTransfer, vk::AccessFlagBits2::eTransferWrite };
 			case ResourceState::PRESENT:
-				return { Texture::Layout::PRESENT_SRC, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
+				return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
 			case ResourceState::HOST_READ:
-				return { Texture::Layout::GENERAL, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead };
+				return { vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead };
 		}
 		// Shouldn't happen but MSVC will throw warning 4715 because they don't analyze enum class control paths
-		return { Texture::Layout::UNDEFINED, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
+		return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone };
+	}
+
+	// GENERAL is as fast as the dedicated layouts with VK_KHR_unified_image_layouts. Without it, some older GPUs lose
+	// a bit of compression (eg: MSAA color on AMD before RDNA3), which we accept to avoid tracking layouts.
+	constexpr Texture::Layout resource_state_to_layout( ResourceState state )
+	{
+		switch ( state )
+		{
+			case ResourceState::UNDEFINED:
+				return Texture::Layout::UNDEFINED;
+			case ResourceState::PRESENT:
+				return Texture::Layout::PRESENT_SRC;
+			default:
+				return Texture::Layout::GENERAL;
+		}
 	}
 }
 
@@ -152,7 +147,14 @@ void renderer::CommandBuffer::texture_barrier( const Texture& tex, ResourceState
 {
 	const auto src = resource_state_to_barrier_state( from );
 	const auto dst = resource_state_to_barrier_state( to );
-	texture_barrier( tex, src.layout, dst.layout, src.stage, dst.stage, src.access, dst.access, mip_level );
+	texture_barrier( tex,
+					 resource_state_to_layout( from ),
+					 resource_state_to_layout( to ),
+					 src.stage,
+					 dst.stage,
+					 src.access,
+					 dst.access,
+					 mip_level );
 }
 
 void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst, int src_mip, int dst_mip, bool linear_filter )
@@ -167,9 +169,9 @@ void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& d
 	};
 
 	const vk::BlitImageInfo2 blit_info { .srcImage = src._image,
-										 .srcImageLayout = vk::ImageLayout::eTransferSrcOptimal,
+										 .srcImageLayout = vk::ImageLayout::eGeneral,
 										 .dstImage = dst._image,
-										 .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
+										 .dstImageLayout = vk::ImageLayout::eGeneral,
 										 .regionCount = 1,
 										 .pRegions = &blit_region,
 										 .filter = linear_filter ? vk::Filter::eLinear : vk::Filter::eNearest };
@@ -194,7 +196,7 @@ void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std:
 	_cmd_buffer.copyBufferToImage(
 		buffer._buffer,
 		tex._image,
-		vk::ImageLayout::eTransferDstOptimal,
+		vk::ImageLayout::eGeneral,
 		vk::BufferImageCopy { .bufferOffset = offset,
 							  .imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor,
 													.mipLevel = static_cast<uint32_t>( mip ),
@@ -256,7 +258,7 @@ void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 	if ( info.color_target.target._view )
 	{
 		color_attachment = { .imageView = info.color_target.target._view,
-							 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+							 .imageLayout = vk::ImageLayout::eGeneral,
 							 .storeOp = vk::AttachmentStoreOp::eStore };
 		if ( info.color_target.clear_value )
 		{
@@ -272,7 +274,7 @@ void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 		{
 			color_attachment.resolveMode = static_cast<vk::ResolveModeFlagBits>( info.color_target.resolve_mode );
 			color_attachment.resolveImageView = info.color_target.resolve_target._view;
-			color_attachment.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+			color_attachment.resolveImageLayout = vk::ImageLayout::eGeneral;
 		}
 
 		renderInfo.colorAttachmentCount = 1;
@@ -286,7 +288,7 @@ void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 	if ( info.depth_target.target._view )
 	{
 		depth_attachment = { .imageView = info.depth_target.target._view,
-							 .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+							 .imageLayout = vk::ImageLayout::eGeneral,
 							 .storeOp = vk::AttachmentStoreOp::eStore };
 		if ( info.depth_target.clear_value )
 		{
@@ -301,7 +303,7 @@ void renderer::CommandBuffer::begin_rendering( RenderInfo info )
 		{
 			depth_attachment.resolveMode = static_cast<vk::ResolveModeFlagBits>( info.depth_target.resolve_mode );
 			depth_attachment.resolveImageView = info.depth_target.resolve_target._view;
-			depth_attachment.resolveImageLayout = vk::ImageLayout::eDepthAttachmentOptimal;
+			depth_attachment.resolveImageLayout = vk::ImageLayout::eGeneral;
 		}
 
 		renderInfo.pDepthAttachment = &depth_attachment;

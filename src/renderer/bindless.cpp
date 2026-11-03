@@ -187,7 +187,7 @@ void renderer::BindlessManagerBase::add_texture_bindings( const Texture::Usage u
 	if ( ( usage & Texture::Usage::SAMPLED ) == Texture::Usage::SAMPLED )
 	{
 		handles.sampled_texture.index = _read_only_textures++;
-		infos[ count ] = { .imageView = handles.view._view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
+		infos[ count ] = { .imageView = handles.view._view, .imageLayout = vk::ImageLayout::eGeneral };
 		writes[ count ] = { .dstSet = _sets[ std::to_underlying( Sets::TEXTURES ) ],
 							.dstBinding = std::to_underlying( TextureBindings::TEXTURES ),
 							.dstArrayElement = handles.sampled_texture.index,
