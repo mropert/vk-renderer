@@ -231,6 +231,22 @@ void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer,
 							  .imageExtent = vk::Extent3D { .width = extent.width, .height = extent.height, .depth = 1 } } );
 }
 
+void renderer::CommandBuffer::copy_texture_to_buffer( const Texture& tex, int mip, const Buffer& buffer, std::size_t offset )
+{
+	assert( mip < tex.get_mips() );
+	assert( offset % Texture::get_texel_block_size( tex.get_format() ) == 0 );
+	assert( offset + tex.get_mip_size( mip ) <= buffer.get_size() );
+	const auto extent = tex.get_extent( mip );
+	const auto aspect = Texture::is_depth_format( tex.get_format() ) ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor;
+	_cmd_buffer.copyImageToBuffer(
+		tex._image,
+		vk::ImageLayout::eGeneral,
+		buffer._buffer,
+		vk::BufferImageCopy { .bufferOffset = offset,
+							  .imageSubresource = { .aspectMask = aspect, .mipLevel = static_cast<uint32_t>( mip ), .layerCount = 1 },
+							  .imageExtent = vk::Extent3D { .width = extent.width, .height = extent.height, .depth = 1 } } );
+}
+
 void renderer::CommandBuffer::fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value )
 {
 	assert( offset + size <= buffer.get_size() );

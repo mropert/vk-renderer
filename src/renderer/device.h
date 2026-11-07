@@ -37,7 +37,13 @@ namespace renderer
 	class Device
 	{
 	public:
-		explicit Device( const char* appname );
+		enum class WindowMode
+		{
+			BORDERLESS, // Covers the primary display
+			HIDDEN // Same size, never shown: for offscreen rendering, still has a surface
+		};
+
+		explicit Device( const char* appname, WindowMode window_mode = WindowMode::BORDERLESS );
 		~Device();
 
 		void wait_idle();

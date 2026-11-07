@@ -113,6 +113,8 @@ namespace renderer
 		// Copies to the top left extent of mip, tightly packed in the buffer. For block compressed formats, extent must be
 		// a multiple of the block size or reach the mip's edge
 		void copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex, int mip, Extent2D extent );
+		// Copies the whole mip, tightly packed in the buffer
+		void copy_texture_to_buffer( const Texture& tex, int mip, const Buffer& buffer, std::size_t offset = 0 );
 		void fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value );
 
 		void begin_rendering( RenderInfo info );

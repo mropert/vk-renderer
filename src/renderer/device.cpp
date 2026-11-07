@@ -10,7 +10,7 @@
 #include <renderer/pipeline.h>
 #include <renderer/shader.h>
 
-renderer::Device::Device( const char* appname )
+renderer::Device::Device( const char* appname, WindowMode window_mode )
 {
 	PROFILER_SCOPE();
 
@@ -23,7 +23,9 @@ renderer::Device::Device( const char* appname )
 	const auto mode = SDL_GetCurrentDisplayMode( display );
 
 	_extent = { .width = static_cast<uint32_t>( mode->w ), .height = static_cast<uint32_t>( mode->h ) };
-	_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN ) );
+	const SDL_WindowFlags window_flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN
+		| ( window_mode == WindowMode::HIDDEN ? SDL_WINDOW_HIDDEN : 0 );
+	_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, window_flags ) );
 
 	if ( !_window )
 	{
