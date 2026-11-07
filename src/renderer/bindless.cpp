@@ -78,8 +78,21 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 			.stageFlags = stages } }
 	};
 
+	// Descriptors can be written while the set is bound (UPDATE_AFTER_BIND) or in use by pending work, as long as that work
+	// doesn't read them (UPDATE_UNUSED_WHILE_PENDING), and only those a shader actually reads must be valid (PARTIALLY_BOUND)
+	const auto texture_binding_flags = vk::DescriptorBindingFlagBits::eUpdateAfterBind
+		| vk::DescriptorBindingFlagBits::eUpdateUnusedWhilePending | vk::DescriptorBindingFlagBits::ePartiallyBound;
+	const std::array<vk::DescriptorBindingFlags, std::to_underlying( TextureBindings::COUNT )> texture_bindings_flags {
+		{ texture_binding_flags, texture_binding_flags, texture_binding_flags }
+	};
+	const vk::DescriptorSetLayoutBindingFlagsCreateInfo texture_bindings_flags_info { .bindingCount = static_cast<uint32_t>(
+																						  texture_bindings_flags.size() ),
+																					  .pBindingFlags = texture_bindings_flags.data() };
+
 	_layouts[ std::to_underlying( Sets::TEXTURES ) ] = device._device.createDescriptorSetLayout(
-		vk::DescriptorSetLayoutCreateInfo { .bindingCount = static_cast<uint32_t>( texture_bindings.size() ),
+		vk::DescriptorSetLayoutCreateInfo { .pNext = &texture_bindings_flags_info,
+											.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool,
+											.bindingCount = static_cast<uint32_t>( texture_bindings.size() ),
 											.pBindings = texture_bindings.data() } );
 
 	std::vector<vk::DescriptorSetLayoutBinding> buffer_bindings;
@@ -99,11 +112,12 @@ renderer::BindlessManagerBase::BindlessManagerBase( Device& device, std::span<co
 														  { .type = vk::DescriptorType::eStorageBuffer,
 															.descriptorCount = static_cast<uint32_t>( _buffers.size() ) } } };
 	// We don't need (or want) individual descriptor set deletion but VulkanHpp RAII is all or nothing :(
-	const vk::DescriptorPoolCreateInfo pool_info { .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-												   .maxSets = static_cast<uint32_t>( ( MAX_TEXTURES * 2 ) + MAX_SAMPLERS
-																					 + _buffers.size() ),
-												   .poolSizeCount = static_cast<uint32_t>( pools.size() ),
-												   .pPoolSizes = pools.data() };
+	const vk::DescriptorPoolCreateInfo pool_info {
+		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
+		.maxSets = static_cast<uint32_t>( ( MAX_TEXTURES * 2 ) + MAX_SAMPLERS + _buffers.size() ),
+		.poolSizeCount = static_cast<uint32_t>( pools.size() ),
+		.pPoolSizes = pools.data()
+	};
 	_pool = device._device.createDescriptorPool( pool_info );
 
 	const auto layouts = get_layouts();

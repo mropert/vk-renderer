@@ -19,6 +19,13 @@ namespace renderer::details
 			case renderer::Texture::Format::B5G5R5A1_UNORM:
 			case renderer::Texture::Format::D16_UNORM:
 				return 2;
+			case renderer::Texture::Format::BC1_RGB_UNORM:
+			case renderer::Texture::Format::BC1_RGB_SRGB:
+			case renderer::Texture::Format::BC4_UNORM:
+				return 8;
+			case renderer::Texture::Format::BC3_UNORM:
+			case renderer::Texture::Format::BC3_SRGB:
+			case renderer::Texture::Format::BC5_UNORM:
 			case renderer::Texture::Format::BC7_UNORM:
 			case renderer::Texture::Format::BC7_SRGB:
 				return 16;
@@ -32,6 +39,12 @@ namespace renderer::details
 	{
 		switch ( format )
 		{
+			case renderer::Texture::Format::BC1_RGB_UNORM:
+			case renderer::Texture::Format::BC1_RGB_SRGB:
+			case renderer::Texture::Format::BC3_UNORM:
+			case renderer::Texture::Format::BC3_SRGB:
+			case renderer::Texture::Format::BC4_UNORM:
+			case renderer::Texture::Format::BC5_UNORM:
 			case renderer::Texture::Format::BC7_UNORM:
 			case renderer::Texture::Format::BC7_SRGB:
 				return 4;
@@ -59,6 +72,11 @@ namespace renderer::details
 	static_assert( get_mip_size( { .format = Texture::Format::BC7_UNORM, .extent = { 12, 12 } }, 1 ) == 64 );
 	static_assert( get_mip_size( { .format = Texture::Format::BC7_UNORM, .extent = { 1024, 512 } }, 10 ) == 16 );
 	static_assert( get_mip_size( { .format = Texture::Format::R8G8B8A8_UNORM, .extent = { 6, 6 } }, 0 ) == 144 );
+	static_assert( get_mip_size( { .format = Texture::Format::BC1_RGB_UNORM, .extent = { 2048, 1024 } }, 0 ) == 1024 * 1024 );
+	static_assert( get_mip_size( { .format = Texture::Format::BC1_RGB_UNORM, .extent = { 2048, 1024 } }, 11 ) == 8 );
+	static_assert( get_mip_size( { .format = Texture::Format::BC4_UNORM, .extent = { 6, 6 } }, 0 ) == 32 );
+	static_assert( get_mip_size( { .format = Texture::Format::BC3_SRGB, .extent = { 2048, 2048 } }, 0 ) == 4 * 1024 * 1024 );
+	static_assert( get_mip_size( { .format = Texture::Format::BC5_UNORM, .extent = { 2048, 1024 } }, 10 ) == 16 );
 }
 
 size_t renderer::Texture::Desc::get_mip_size( int mip ) const

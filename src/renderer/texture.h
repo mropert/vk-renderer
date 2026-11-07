@@ -31,6 +31,13 @@ namespace renderer
 			R32_SFLOAT = std::to_underlying( vk::Format::eR32Sfloat ),
 			D16_UNORM = std::to_underlying( vk::Format::eD16Unorm ),
 			D32_SFLOAT = std::to_underlying( vk::Format::eD32Sfloat ),
+			// RGB variant: alpha is always 1, the 3 color mode's index 3 decodes as opaque black (DXGI's BC1 is the RGBA one)
+			BC1_RGB_UNORM = std::to_underlying( vk::Format::eBc1RgbUnormBlock ),
+			BC1_RGB_SRGB = std::to_underlying( vk::Format::eBc1RgbSrgbBlock ),
+			BC3_UNORM = std::to_underlying( vk::Format::eBc3UnormBlock ),
+			BC3_SRGB = std::to_underlying( vk::Format::eBc3SrgbBlock ),
+			BC4_UNORM = std::to_underlying( vk::Format::eBc4UnormBlock ),
+			BC5_UNORM = std::to_underlying( vk::Format::eBc5UnormBlock ),
 			BC7_UNORM = std::to_underlying( vk::Format::eBc7UnormBlock ),
 			BC7_SRGB = std::to_underlying( vk::Format::eBc7SrgbBlock )
 		};
@@ -82,7 +89,7 @@ namespace renderer
 
 		size_t get_mip_size( int mip ) const { return _desc.get_mip_size( mip ); }
 
-		// Bytes per texel, or per block of texels for block compressed formats (4x4 texels for BC7)
+		// Bytes per texel, or per block of 4x4 texels for block compressed formats
 		static size_t get_texel_block_size( Format format );
 		// Texels per block side (4 for block compressed formats, 1 otherwise)
 		static size_t get_texel_block_extent( Format format );

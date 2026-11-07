@@ -161,8 +161,19 @@ void renderer::CommandBuffer::barrier( Stage producers, Stage consumers )
 
 void renderer::CommandBuffer::blit_texture( const Texture& src, const Texture& dst, int src_mip, int dst_mip, bool linear_filter )
 {
-	const auto src_size = src.get_extent( src_mip );
-	const auto dst_size = dst.get_extent( dst_mip );
+	blit_texture( src, dst, src_mip, src.get_extent( src_mip ), dst_mip, dst.get_extent( dst_mip ), linear_filter );
+}
+
+void renderer::CommandBuffer::blit_texture( const Texture& src,
+											const Texture& dst,
+											int src_mip,
+											Extent2D src_size,
+											int dst_mip,
+											Extent2D dst_size,
+											bool linear_filter )
+{
+	assert( src_size.width <= src.get_extent( src_mip ).width && src_size.height <= src.get_extent( src_mip ).height );
+	assert( dst_size.width <= dst.get_extent( dst_mip ).width && dst_size.height <= dst.get_extent( dst_mip ).height );
 	const vk::ImageBlit2 blit_region {
 		.srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = static_cast<uint32_t>( src_mip ), .layerCount = 1 },
 		.srcOffsets = { { vk::Offset3D { }, vk::Offset3D( src_size.width, src_size.height, 1 ) } },
@@ -192,9 +203,23 @@ void renderer::CommandBuffer::copy_buffer( const Buffer& src,
 
 void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std::size_t offset, const Texture& tex, int mip )
 {
+	copy_buffer_to_texture( buffer, offset, tex, mip, tex.get_extent( mip ) );
+}
+
+void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer,
+													  std::size_t offset,
+													  const Texture& tex,
+													  int mip,
+													  Extent2D extent )
+{
 	[[maybe_unused]] const auto block_size = Texture::get_texel_block_size( tex.get_format() );
 	assert( block_size != 0 && offset % block_size == 0 );
 	assert( mip < tex.get_mips() );
+	[[maybe_unused]] const auto mip_extent = tex.get_extent( mip );
+	[[maybe_unused]] const auto block_extent = static_cast<uint32_t>( Texture::get_texel_block_extent( tex.get_format() ) );
+	assert( extent.width <= mip_extent.width && extent.height <= mip_extent.height );
+	assert( ( extent.width % block_extent == 0 || extent.width == mip_extent.width )
+			&& ( extent.height % block_extent == 0 || extent.height == mip_extent.height ) );
 	_cmd_buffer.copyBufferToImage(
 		buffer._buffer,
 		tex._image,
@@ -203,9 +228,7 @@ void renderer::CommandBuffer::copy_buffer_to_texture( const Buffer& buffer, std:
 							  .imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor,
 													.mipLevel = static_cast<uint32_t>( mip ),
 													.layerCount = 1 },
-							  .imageExtent = vk::Extent3D { .width = std::max( tex._desc.extent.width >> mip, 1u ),
-															.height = std::max( tex._desc.extent.height >> mip, 1u ),
-															.depth = 1 } } );
+							  .imageExtent = vk::Extent3D { .width = extent.width, .height = extent.height, .depth = 1 } } );
 }
 
 void renderer::CommandBuffer::fill_buffer( const Buffer& buffer, size_t offset, size_t size, uint32_t value )

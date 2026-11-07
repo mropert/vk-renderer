@@ -81,6 +81,10 @@ renderer::Device::Device( const char* appname )
 	const VkPhysicalDeviceVulkan12Features req_features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
 															.storageBuffer8BitAccess = true,
 															.descriptorIndexing = true,
+															.descriptorBindingSampledImageUpdateAfterBind = true,
+															.descriptorBindingStorageImageUpdateAfterBind = true,
+															.descriptorBindingUpdateUnusedWhilePending = true,
+															.descriptorBindingPartiallyBound = true,
 															.bufferDeviceAddress = true };
 
 	const VkPhysicalDeviceVulkan11Features req_features11 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
