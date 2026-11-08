@@ -168,10 +168,18 @@ std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 		return { };
 	}
 
-	tbb::parallel_for( 0zu,
-					   to_rebuild.size(),
-					   [ & ]( size_t index )
-					   { to_rebuild[ index ].result = compile_shader( _compiler, std::move( to_rebuild[ index ].source ) ); } );
+	const auto compile = [ & ]( size_t index )
+	{ to_rebuild[ index ].result = compile_shader( _compiler, std::move( to_rebuild[ index ].source ) ); };
+#ifdef _DEBUG
+	// The compiler allocates a lot and uses STL containers heavily: with the debug CRT's heap and iterator tracking locks,
+	// compiling in parallel is several times slower than one shader at a time
+	for ( size_t index = 0; index < to_rebuild.size(); ++index )
+	{
+		compile( index );
+	}
+#else
+	tbb::parallel_for( 0zu, to_rebuild.size(), compile );
+#endif
 
 	std::vector<size_t> rebuilt;
 	rebuilt.reserve( to_rebuild.size() );
