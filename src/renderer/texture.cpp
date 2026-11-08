@@ -15,8 +15,6 @@ namespace renderer::details
 				return 4;
 			case renderer::Texture::Format::R16G16B16A16_SFLOAT:
 				return 8;
-			case renderer::Texture::Format::B5G6R5_UNORM:
-			case renderer::Texture::Format::B5G5R5A1_UNORM:
 			case renderer::Texture::Format::D16_UNORM:
 				return 2;
 			case renderer::Texture::Format::BC1_RGB_UNORM:

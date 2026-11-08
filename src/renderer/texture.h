@@ -25,8 +25,6 @@ namespace renderer
 			R8G8B8A8_SRGB = std::to_underlying( vk::Format::eR8G8B8A8Srgb ),
 			B8G8R8A8_UNORM = std::to_underlying( vk::Format::eB8G8R8A8Unorm ),
 			B8G8R8A8_SRGB = std::to_underlying( vk::Format::eB8G8R8A8Srgb ),
-			B5G6R5_UNORM = std::to_underlying( vk::Format::eB5G6R5UnormPack16 ),
-			B5G5R5A1_UNORM = std::to_underlying( vk::Format::eB5G5R5A1UnormPack16 ),
 			R16G16B16A16_SFLOAT = std::to_underlying( vk::Format::eR16G16B16A16Sfloat ),
 			R32_SFLOAT = std::to_underlying( vk::Format::eR32Sfloat ),
 			D16_UNORM = std::to_underlying( vk::Format::eD16Unorm ),
