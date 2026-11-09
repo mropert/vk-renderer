@@ -165,6 +165,16 @@ const std::filesystem::path& renderer::ShaderCompiler::get_base_directory() cons
 	return _impl->base_dir;
 }
 
+void renderer::ShaderCompiler::prewarm() const
+{
+	PROFILER_SCOPE();
+	constexpr std::string_view source_code = "#version 460\nvoid main() {}";
+	const ShaderSource source { .path = "prewarm", .stage = ShaderStage::COMPUTE };
+	const auto options = create_compile_options( _impl->base_dir, source );
+	// A failure only means the first real compile builds the tables instead
+	_impl->compiler.PreprocessGlsl( source_code.data(), source_code.size(), get_shader_kind( source.stage ), source.path.c_str(), options );
+}
+
 std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler::compile( ShaderSource source ) const
 {
 	const auto path = _impl->base_dir / source.path;

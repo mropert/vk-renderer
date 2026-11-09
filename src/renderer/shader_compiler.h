@@ -17,6 +17,10 @@ namespace renderer
 
 		const std::filesystem::path& get_base_directory() const;
 
+		// Builds glslang's process-wide built-in tables, which every thread otherwise waits for during the first compile.
+		// They are built per #version: this only helps shaders using #version 460.
+		void prewarm() const;
+
 		// Read file and compile
 		std::expected<raii::ShaderCode, std::string> compile( ShaderSource source ) const;
 		// Compile from memory source

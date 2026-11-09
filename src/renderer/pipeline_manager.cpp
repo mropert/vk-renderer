@@ -63,13 +63,14 @@ renderer::PipelineManager::PipelineManager( Device& device,
 			  PROFILER_THREAD( "pipeline_rebuild" );
 			  tbb_observer observer;
 			  observer.observe();
+			  _compiler.prewarm();
 			  while ( !tok.stop_requested() )
 			  {
 				  rebuild_job();
 				  if ( !tok.stop_requested() )
 				  {
 					  using namespace std::chrono_literals;
-					  std::this_thread::sleep_for( 1s );
+					  std::this_thread::sleep_for( 100ms );
 				  }
 			  }
 		  } )
