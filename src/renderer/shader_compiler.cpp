@@ -133,6 +133,13 @@ namespace
 		const auto data = reinterpret_cast<const uint8_t*>( &v );
 		return fnv1a_64( std::span { data, data + sizeof( T ) }, hash );
 	}
+
+	// Cache files are this checksum of the SPIR-V followed by the SPIR-V
+	[[nodiscard]] uint64_t spirv_checksum( std::span<const uint32_t> code )
+	{
+		const auto data = reinterpret_cast<const uint8_t*>( code.data() );
+		return fnv1a_64( std::span { data, code.size_bytes() } );
+	}
 }
 
 struct renderer::ShaderCompiler::Impl
@@ -254,21 +261,23 @@ std::optional<renderer::raii::ShaderCode> renderer::ShaderCache::get( ShaderSour
 		return std::nullopt;
 	}
 
+	uint64_t checksum = 0;
 	const auto file_size = file.tellg();
-	if ( file_size % sizeof( uint32_t ) != 0 || file_size <= sizeof( uint32_t ) )
+	if ( file_size % sizeof( uint32_t ) != 0 || file_size <= sizeof( checksum ) )
 	{
 		return std::nullopt;
 	}
 
-	file.seekg( sizeof( uint32_t ), std::ios::beg );
-	std::vector<uint32_t> blob( file_size / sizeof( uint32_t ) - 1 );
-	file.read( reinterpret_cast<char*>( blob.data() ), file_size - std::streamoff( sizeof( uint32_t ) ) );
-	if ( !file )
+	const size_t code_size = static_cast<size_t>( file_size ) - sizeof( checksum );
+	std::vector<uint32_t> blob( code_size / sizeof( uint32_t ) );
+	file.seekg( 0, std::ios::beg );
+	file.read( reinterpret_cast<char*>( &checksum ), sizeof( checksum ) );
+	file.read( reinterpret_cast<char*>( blob.data() ), static_cast<std::streamsize>( code_size ) );
+	if ( !file || spirv_checksum( blob ) != checksum )
 	{
 		return std::nullopt;
 	}
 
-	// TODO: validate that the blob match the 32 bit checksum header
 	return raii::ShaderCode( std::move( source ), std::move( blob ) );
 }
 
@@ -283,9 +292,8 @@ void renderer::ShaderCache::add( ShaderSourceHash key, const raii::ShaderCode& c
 	{
 		return;
 	}
-	// TODO: calc checksum
-	const uint32_t checksum = 0u;
-	file.write( reinterpret_cast<const char*>( &checksum ), sizeof( uint32_t ) );
+	const uint64_t checksum = spirv_checksum( { code.get_data(), code.get_size() } );
+	file.write( reinterpret_cast<const char*>( &checksum ), sizeof( checksum ) );
 	file.write( reinterpret_cast<const char*>( code.get_data() ), code.get_size_bytes() );
 	file.close();
 
