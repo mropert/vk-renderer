@@ -6,13 +6,31 @@
 
 namespace
 {
-	std::expected<renderer::raii::ShaderCode, renderer::Error> compile_shader( const renderer::ShaderCompiler& compiler,
-																			   renderer::ShaderSource source )
+	std::expected<renderer::raii::ShaderCode, renderer::Error>
+	compile_shader( const renderer::ShaderCompiler& compiler, const renderer::ShaderCache* cache, renderer::ShaderSource source )
 	{
+		renderer::ShaderSourceHash hash { };
+		if ( cache )
+		{
+			auto ret = compiler.hash_source( source );
+			if ( !ret )
+			{
+				return std::unexpected( renderer::Error( std::move( ret.error() ) ) );
+			}
+			hash = ret.value();
+			if ( auto blob = cache->get( source, hash ) )
+			{
+				return std::move( *blob );
+			}
+		}
 		auto compilation_result = compiler.compile( std::move( source ) );
 		if ( !compilation_result )
 		{
 			return std::unexpected( renderer::Error( "Shader compilation failed: " + compilation_result.error() ) );
+		}
+		if ( cache )
+		{
+			cache->add( hash, compilation_result.value() );
 		}
 		return std::move( compilation_result.value() );
 	}
@@ -31,10 +49,14 @@ namespace
 	};
 }
 
-renderer::PipelineManager::PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManagerBase& bindless_manager )
+renderer::PipelineManager::PipelineManager( Device& device,
+											std::filesystem::path shader_dir,
+											const BindlessManagerBase& bindless_manager,
+											std::filesystem::path shader_cache_dir )
 	: _device( &device )
 	, _bindless_manager( &bindless_manager )
 	, _compiler( std::move( shader_dir ) )
+	, _cache( shader_cache_dir.empty() ? std::unique_ptr<ShaderCache> { } : std::make_unique<ShaderCache>( std::move( shader_cache_dir ) ) )
 	, _rebuild_thread(
 		  [ & ]( std::stop_token tok )
 		  {
@@ -169,7 +191,7 @@ std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 	}
 
 	const auto compile = [ & ]( size_t index )
-	{ to_rebuild[ index ].result = compile_shader( _compiler, std::move( to_rebuild[ index ].source ) ); };
+	{ to_rebuild[ index ].result = compile_shader( _compiler, _cache.get(), std::move( to_rebuild[ index ].source ) ); };
 #ifdef _DEBUG
 	// The compiler allocates a lot and uses STL containers heavily: with the debug CRT's heap and iterator tracking locks,
 	// compiling in parallel is several times slower than one shader at a time

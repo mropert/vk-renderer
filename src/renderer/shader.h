@@ -35,7 +35,14 @@ namespace renderer
 		auto operator<=>( const ShaderSource& other ) const = default;
 	};
 
+	// Unique hash for a given ShaderSource representing the full content + compiler options
+	struct ShaderSourceHash
+	{
+		uint64_t hash;
+	};
+
 	class PipelineManager;
+	class ShaderCache;
 	class ShaderCompiler;
 
 	namespace raii
@@ -60,6 +67,7 @@ namespace renderer
 			}
 
 			friend PipelineManager;
+			friend ShaderCache;
 			friend ShaderCompiler;
 
 			ShaderSource _source;

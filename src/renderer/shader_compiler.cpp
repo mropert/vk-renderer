@@ -1,9 +1,12 @@
 #include "shader_compiler.h"
 
+#include <algorithm>
 #include <format>
 #include <fstream>
+#include <glslang/build_info.h>
 #include <renderer/details/profiler.h>
 #include <shaderc/shaderc.hpp>
+#include <spirv-tools/libspirv.h>
 
 namespace
 {
@@ -18,7 +21,7 @@ namespace
 		std::ifstream istream( path );
 		if ( !istream )
 		{
-			return {};
+			return { };
 		}
 		std::string source { std::istreambuf_iterator<char>( istream ), std::istreambuf_iterator<char>() };
 		return { path.string(), std::move( source ) };
@@ -74,6 +77,62 @@ namespace
 				throw renderer::Error( "invalid shader type" );
 		}
 	}
+
+	constexpr auto SHADER_TARGET_VULKAN_VERSION = shaderc_env_version_vulkan_1_2;
+	constexpr auto SHADER_OPTIMIZATION_LEVEL = shaderc_optimization_level_performance;
+#ifdef _DEBUG
+	constexpr bool SHADER_GENERATE_DEBUG_INFO = true;
+#else
+	constexpr bool SHADER_GENERATE_DEBUG_INFO = false;
+#endif
+
+	shaderc::CompileOptions create_compile_options( const std::filesystem::path& base_dir, const renderer::ShaderSource& source )
+	{
+		shaderc::CompileOptions options;
+		// XXX: Technically we are using Vulkan 1.3 but the compiler emits incorrect LocalSizeId usage with mesh shaders
+		options.SetTargetEnvironment( shaderc_target_env_vulkan, SHADER_TARGET_VULKAN_VERSION );
+		options.SetOptimizationLevel( SHADER_OPTIMIZATION_LEVEL );
+		options.SetIncluder( std::make_unique<ShaderIncluder>( base_dir ) );
+		for ( const auto& define : source.defines )
+		{
+			options.AddMacroDefinition( define.key, define.value );
+		}
+		if ( SHADER_GENERATE_DEBUG_INFO )
+		{
+			options.SetGenerateDebugInfo();
+		}
+
+		return options;
+	}
+
+	constexpr uint64_t FNV1A_64_INIT = 14695981039346656037ull;
+	[[nodiscard]] constexpr uint64_t fnv1a_64( std::span<const uint8_t> data, uint64_t hash = FNV1A_64_INIT )
+	{
+		for ( const auto b : data )
+		{
+			hash ^= b;
+			hash *= 1099511628211ull; // FNV-1a 64-bit prime
+		}
+		return hash;
+	}
+
+	[[nodiscard]] constexpr uint64_t fnv1a_64( std::string_view sv, uint64_t hash = FNV1A_64_INIT )
+	{
+		const auto data = reinterpret_cast<const uint8_t*>( sv.data() );
+		return fnv1a_64( std::span { data, data + sv.size() }, hash );
+	}
+
+	[[nodiscard]] constexpr uint64_t fnv1a_64( const char* s, uint64_t hash = FNV1A_64_INIT )
+	{
+		return fnv1a_64( std::string_view( s ), hash );
+	}
+
+	template <typename T>
+	[[nodiscard]] constexpr uint64_t fnv1a_64( const T& v, uint64_t hash = FNV1A_64_INIT )
+	{
+		const auto data = reinterpret_cast<const uint8_t*>( &v );
+		return fnv1a_64( std::span { data, data + sizeof( T ) }, hash );
+	}
 }
 
 struct renderer::ShaderCompiler::Impl
@@ -115,19 +174,7 @@ std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler:
 																						  std::string_view source_code ) const
 {
 	PROFILER_SCOPE();
-	shaderc::CompileOptions options;
-	// XXX: Technically we are using Vulkan 1.3 but the compiler emits incorrect LocalSizeId usage with mesh shaders
-	options.SetTargetEnvironment( shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2 );
-	options.SetOptimizationLevel( shaderc_optimization_level_performance );
-	options.SetIncluder( std::make_unique<ShaderIncluder>( _impl->base_dir ) );
-	for ( const auto& define : source.defines )
-	{
-		options.AddMacroDefinition( define.key, define.value );
-	}
-#ifdef _DEBUG
-	options.SetGenerateDebugInfo();
-#endif
-
+	const auto options = create_compile_options( _impl->base_dir, source );
 	const auto result = _impl->compiler.CompileGlslToSpv( source_code.data(),
 														  source_code.size(),
 														  get_shader_kind( source.stage ),
@@ -142,4 +189,119 @@ std::expected<renderer::raii::ShaderCode, std::string> renderer::ShaderCompiler:
 	// Hiding away shaderc means we need to make a copy since it doesn't provide a way to take ownership of the data
 	// If this proves to be a serious hindrance we could replace the vector with a type erased shaderc_compilation_result_t
 	return raii::ShaderCode( std::move( source ), std::vector<uint32_t>( result.begin(), result.end() ) );
+}
+
+std::expected<renderer::ShaderSourceHash, std::string> renderer::ShaderCompiler::hash_source( const ShaderSource& source ) const
+{
+	PROFILER_SCOPE();
+
+	const auto path = _impl->base_dir / source.path;
+	std::ifstream istream( path );
+	if ( !istream )
+	{
+		return std::unexpected( std::format( "Couldn't open shader file '{}'", path.string() ) );
+	}
+	const std::string source_code { std::istreambuf_iterator<char>( istream ), std::istreambuf_iterator<char>() };
+
+	const auto options = create_compile_options( _impl->base_dir, source );
+
+	const auto result = _impl->compiler.PreprocessGlsl( source_code.data(),
+														source_code.size(),
+														get_shader_kind( source.stage ),
+														source.path.c_str(),
+														options );
+
+	if ( result.GetCompilationStatus() != shaderc_compilation_status_success )
+	{
+		return std::unexpected( result.GetErrorMessage() );
+	}
+
+	auto hash = fnv1a_64( GLSLANG_VERSION_MAJOR );
+	hash = fnv1a_64( GLSLANG_VERSION_MINOR, hash );
+	hash = fnv1a_64( GLSLANG_VERSION_PATCH, hash );
+	hash = fnv1a_64( spvSoftwareVersionDetailsString(), hash );
+	hash = fnv1a_64( SHADER_TARGET_VULKAN_VERSION, hash );
+	hash = fnv1a_64( SHADER_OPTIMIZATION_LEVEL, hash );
+	hash = fnv1a_64( SHADER_GENERATE_DEBUG_INFO, hash );
+	hash = fnv1a_64( source.stage, hash );
+	hash = fnv1a_64( { result.begin(), result.end() }, hash );
+
+	return ShaderSourceHash { hash };
+}
+
+renderer::ShaderCache::ShaderCache( std::filesystem::path base_dir )
+	: _base_dir( std::move( base_dir ) )
+{
+	std::error_code err { };
+	std::filesystem::create_directories( _base_dir, err );
+	if ( err )
+	{
+		throw Error( std::format( "Could not create shader cache directory: {}", err.message() ) );
+	}
+}
+
+std::filesystem::path renderer::ShaderCache::get_path( ShaderSourceHash key ) const
+{
+	return _base_dir / std::format( "{:016X}.spirv", key.hash );
+}
+
+std::optional<renderer::raii::ShaderCode> renderer::ShaderCache::get( ShaderSource& source, ShaderSourceHash key ) const
+{
+	std::ifstream file( get_path( key ), std::ios::binary | std::ios::ios_base::ate );
+
+	if ( !file )
+	{
+		return std::nullopt;
+	}
+
+	const auto file_size = file.tellg();
+	if ( file_size % sizeof( uint32_t ) != 0 || file_size <= sizeof( uint32_t ) )
+	{
+		return std::nullopt;
+	}
+
+	file.seekg( sizeof( uint32_t ), std::ios::beg );
+	std::vector<uint32_t> blob( file_size / sizeof( uint32_t ) - 1 );
+	file.read( reinterpret_cast<char*>( blob.data() ), file_size - std::streamoff( sizeof( uint32_t ) ) );
+	if ( !file )
+	{
+		return std::nullopt;
+	}
+
+	// TODO: validate that the blob match the 32 bit checksum header
+	return raii::ShaderCode( std::move( source ), std::move( blob ) );
+}
+
+void renderer::ShaderCache::add( ShaderSourceHash key, const raii::ShaderCode& code ) const
+{
+	const auto path = get_path( key );
+	auto tmp_path = path;
+	tmp_path += ".tmp";
+
+	std::ofstream file( tmp_path, std::ios::binary | std::ios::trunc );
+	if ( !file )
+	{
+		return;
+	}
+	// TODO: calc checksum
+	const uint32_t checksum = 0u;
+	file.write( reinterpret_cast<const char*>( &checksum ), sizeof( uint32_t ) );
+	file.write( reinterpret_cast<const char*>( code.get_data() ), code.get_size_bytes() );
+	file.close();
+
+	if ( file )
+	{
+		std::error_code err { };
+		std::filesystem::remove( path, err );
+		std::filesystem::rename( tmp_path, path, err );
+		if ( err )
+		{
+			std::filesystem::remove( tmp_path, err );
+		}
+	}
+	else
+	{
+		std::error_code ignored { };
+		std::filesystem::remove( tmp_path, ignored );
+	}
 }

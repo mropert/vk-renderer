@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <expected>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <renderer/common.h>
 #include <renderer/pipeline.h>
@@ -42,7 +43,10 @@ namespace renderer
 		using MakePipelineResult = std::expected<raii::Pipeline, Error>;
 
 	public:
-		PipelineManager( Device& device, std::filesystem::path shader_dir, const BindlessManagerBase& bindless_manager );
+		PipelineManager( Device& device,
+						 std::filesystem::path shader_dir,
+						 const BindlessManagerBase& bindless_manager,
+						 std::filesystem::path shader_cache_dir = { } );
 
 		// Creates and return new pipeline. Safe to call from multiple threads at once.
 		PipelineHandle add( Pipeline::Desc desc, std::initializer_list<ShaderSource> shaders );
@@ -64,6 +68,7 @@ namespace renderer
 		Device* _device;
 		const BindlessManagerBase* _bindless_manager;
 		ShaderCompiler _compiler;
+		std::unique_ptr<ShaderCache> _cache;
 		std::vector<Shader> _shaders;
 		std::vector<Item> _items;
 		// Recursive mtx has higher perf on windows, blame MSVC runtime
