@@ -137,6 +137,12 @@ void renderer::PipelineManager::wait_ready()
 	}
 }
 
+bool renderer::PipelineManager::is_ready()
+{
+	std::unique_lock lock( _mtx );
+	return _pending_errors.empty() && _available_pipelines == _items.size();
+}
+
 renderer::PipelineManager::MakePipelineResult renderer::PipelineManager::make( const Pipeline::Desc& desc,
 																			   std::span<const raii::ShaderCode*> shaders ) const
 {

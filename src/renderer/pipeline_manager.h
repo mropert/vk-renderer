@@ -59,6 +59,8 @@ namespace renderer
 		// Wait until all added pipelines have been created (or throw an exception if some couldn't be built)
 		// Subsequent rebuilds in flight will not block
 		void wait_ready();
+		// Whether all added pipelines have been created, false if one couldn't be built. Doesn't wait.
+		bool is_ready();
 
 	private:
 		MakePipelineResult make( const Pipeline::Desc& desc, std::span<const raii::ShaderCode*> shaders ) const;
