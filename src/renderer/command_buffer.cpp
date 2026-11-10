@@ -488,21 +488,13 @@ void renderer::CommandBuffer::end_query( StatisticsQuery query )
 
 renderer::CommandBuffer::DebugLabelScope renderer::CommandBuffer::debug_label( const char* name, const std::array<float, 4>& color )
 {
-	if ( !_debug_labels_support )
-	{
-		return DebugLabelScope( nullptr );
-	}
-
 	_cmd_buffer.beginDebugUtilsLabelEXT( vk::DebugUtilsLabelEXT { .pLabelName = name, .color = color } );
-	return DebugLabelScope( this );
+	return DebugLabelScope( *this );
 }
 
 renderer::CommandBuffer::DebugLabelScope::~DebugLabelScope()
 {
-	if ( _cmd )
-	{
-		_cmd->_cmd_buffer.endDebugUtilsLabelEXT();
-	}
+	_cmd._cmd_buffer.endDebugUtilsLabelEXT();
 }
 
 void renderer::CommandBuffer::push_constants( const Pipeline& pipeline, const void* data, std::size_t size )

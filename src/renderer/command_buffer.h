@@ -76,12 +76,12 @@ namespace renderer
 			~DebugLabelScope();
 
 		private:
-			explicit DebugLabelScope( CommandBuffer* cmd )
+			explicit DebugLabelScope( CommandBuffer& cmd )
 				: _cmd( cmd )
 			{
 			}
 
-			CommandBuffer* _cmd; // null when debug labels aren't supported
+			CommandBuffer& _cmd;
 
 			friend class CommandBuffer;
 		};
@@ -170,16 +170,15 @@ namespace renderer
 		void end_query( StatisticsQuery query );
 
 		// Named (and optionally colored) range showing up in debuggers/profilers (RenderDoc, Nsight...)
-		// Color is RGBA, all zeroes means no color. No-op if VK_EXT_debug_utils isn't supported.
+		// Color is RGBA, all zeroes means no color.
 		DebugLabelScope debug_label( const char* name, const std::array<float, 4>& color = { } );
 
 		// Get the underlying renderer buffer, for integration with 3rd party (eg: imgui)
 		VkCommandBuffer get_impl() const { return *_cmd_buffer; }
 
 	private:
-		CommandBuffer( vk::raii::CommandBuffer cmd_buffer, bool debug_labels_support )
+		explicit CommandBuffer( vk::raii::CommandBuffer cmd_buffer )
 			: _cmd_buffer( std::move( cmd_buffer ) )
-			, _debug_labels_support( debug_labels_support )
 		{
 		}
 
@@ -187,7 +186,6 @@ namespace renderer
 
 		vk::raii::CommandBuffer _cmd_buffer;
 		void* _optick_previous = nullptr;
-		bool _debug_labels_support = false;
 
 		friend class Device;
 		friend class Swapchain;

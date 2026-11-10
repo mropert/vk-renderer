@@ -23,6 +23,9 @@ The API is built on top of Vulkan 1.3 core, which requires the following:
 * **AMD**: GCN 4 (Polaris) or newer on Windows; GCN 1 or newer on Linux with RADV (Mesa 22.0+).
 * **Apple**: M1 or newer with MoltenVK 1.3.0+ (April 2025).
 
+The instance also requires `VK_EXT_debug_utils`, for `renderer::CommandBuffer::debug_label`. The Khronos loader implements it
+itself, so it's available on desktop platforms whatever the driver.
+
 The following extensions and features are used when available but will not produce hard errors when creating a `Device` on
 unsupported hardware:
 * `pipelineStatisticsQuery`: `renderer::StatisticsQuery` is only available if `Device::Properties::statistics_support` is true.
@@ -33,7 +36,6 @@ unsupported hardware:
     if `Device::Properties::draw_indirect_count_support` is false.
 * `samplerFilterMinmax`: Only `renderer::Sampler::ReductionMode::AVERAGE` will be supported if `Device::Properties::minmax_filter_support`
     is false. Using `renderer::BindlessManager::LINEAR_MIN_SAMPLER` without `samplerFilterMinmax` support will yield a `LINEAR_SAMPLER`.
-* `VK_EXT_debug_utils`: Calling `renderer::CommandBuffer::debug_label` is a no-op if `Device::Properties::debug_labels_support` is false.
 
 ## Building
 
