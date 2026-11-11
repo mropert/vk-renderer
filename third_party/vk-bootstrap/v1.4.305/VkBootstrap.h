@@ -263,12 +263,13 @@ const char* to_string(SwapchainError err);
 // can use a fallback if it isn't supported but need to know if support is available first.
 struct SystemInfo {
     private:
-    SystemInfo();
+    SystemInfo(const std::vector<const char*>& requested_layers);
 
     public:
     // Use get_system_info to create a SystemInfo struct. This is because loading vulkan could fail.
-    static Result<SystemInfo> get_system_info();
-    static Result<SystemInfo> get_system_info(PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr);
+    static Result<SystemInfo> get_system_info(const std::vector<const char*>& requested_layers = {});
+    static Result<SystemInfo> get_system_info(
+        PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr, const std::vector<const char*>& requested_layers = {});
 
     // Returns true if a layer is available
     bool is_layer_available(const char* layer_name) const;
