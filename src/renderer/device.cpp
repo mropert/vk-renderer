@@ -14,18 +14,24 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 {
 	PROFILER_SCOPE();
 
-	if ( !SDL_Init( SDL_INIT_VIDEO ) )
 	{
-		throw Error( SDL_GetError() );
+		PROFILER_SCOPE_N( "SDL_init" );
+		if ( !SDL_Init( SDL_INIT_VIDEO ) )
+		{
+			throw Error( SDL_GetError() );
+		}
 	}
 
 	const auto display = SDL_GetPrimaryDisplay();
 	const auto mode = SDL_GetCurrentDisplayMode( display );
 
 	_extent = { .width = static_cast<uint32_t>( mode->w ), .height = static_cast<uint32_t>( mode->h ) };
-	const SDL_WindowFlags window_flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN
-		| ( window_mode == WindowMode::HIDDEN ? SDL_WINDOW_HIDDEN : 0 );
-	_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, window_flags ) );
+	{
+		PROFILER_SCOPE_N( "SDL_CreateWindow" );
+		const SDL_WindowFlags window_flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_VULKAN
+			| ( window_mode == WindowMode::HIDDEN ? SDL_WINDOW_HIDDEN : 0 );
+		_window.reset( SDL_CreateWindow( appname, _extent.width, _extent.height, window_flags ) );
+	}
 
 	if ( !_window )
 	{
@@ -35,11 +41,10 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 	Uint32 ext_count = 0;
 	const auto exts = SDL_Vulkan_GetInstanceExtensions( &ext_count );
 
-	// Debug utils is needed for debug labels (RenderDoc, Nsight...). The Khronos loader implements it itself, so it's
-	// always there on desktop. Checking first would need a SystemInfo, a second scan of every layer manifest on top of
-	// the one build() does (~280 ms with many layers installed).
-	// VkBootstrap also adds it implicitly along with the debug messenger, but let's not rely on that.
-	// Duplicate extension names are harmless (SDL already duplicates the surface ones).
+	// We don't query for VK_EXT_debug_utils, we just assumes it's there
+	// Querying would require calls expensive checks vkb::SystemInfo that will then be repeated by the instance builder
+	// If we need to be both 100% correct and performant we will need to either patch or bypass vkb to avoid redundant checks
+	PROFILER_SCOPE_PUSH( instance, "vk_instance" );
 	const auto vk_instance_result = vkb::InstanceBuilder()
 										.set_app_name( appname )
 #if _DEBUG
@@ -50,7 +55,7 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 										.enable_extensions( ext_count, exts )
 										.enable_extension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME )
 										.build();
-
+	PROFILER_SCOPE_POP( instance );
 	if ( !vk_instance_result )
 	{
 		throw Error( vk_instance_result.error(), vk_instance_result.vk_result() );
@@ -59,9 +64,12 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 	_debug_util = { _instance, vk_instance_result.value().debug_messenger };
 
 	VkSurfaceKHR surface { };
-	if ( !SDL_Vulkan_CreateSurface( _window.get(), *_instance, nullptr, &surface ) )
 	{
-		throw Error( SDL_GetError() );
+		PROFILER_SCOPE_N( "sdl_vk_surface" );
+		if ( !SDL_Vulkan_CreateSurface( _window.get(), *_instance, nullptr, &surface ) )
+		{
+			throw Error( SDL_GetError() );
+		}
 	}
 
 	_surface = vk::raii::SurfaceKHR( _instance, surface );
@@ -84,6 +92,7 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 
 	const VkPhysicalDeviceFeatures req_features { .depthClamp = true, .depthBiasClamp = true, .textureCompressionBC = true };
 
+	PROFILER_SCOPE_PUSH( physical_device, "vk_physical_device" );
 	auto physical_device_ret = vkb::PhysicalDeviceSelector( vk_instance_result.value() )
 								   .set_minimum_version( 1, 3 )
 								   .set_required_features( req_features )
@@ -92,6 +101,7 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 								   .set_required_features_11( req_features11 )
 								   .set_surface( *_surface )
 								   .select();
+	PROFILER_SCOPE_POP( physical_device );
 
 	if ( !physical_device_ret )
 	{
@@ -126,7 +136,9 @@ renderer::Device::Device( const char* appname, WindowMode window_mode )
 	{
 		device_builder.add_pNext( &mesh_shader_feature );
 	}
+	PROFILER_SCOPE_PUSH( device, "vk_device" );
 	const auto device_ret = device_builder.build();
+	PROFILER_SCOPE_POP( device );
 	if ( !device_ret )
 	{
 		throw Error( device_ret.error(), device_ret.vk_result() );
