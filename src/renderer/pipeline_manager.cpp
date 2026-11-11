@@ -1,5 +1,6 @@
 #include "pipeline_manager.h"
 
+#include <cassert>
 #include <renderer/details/profiler.h>
 #include <renderer/device.h>
 #include <renderer/third_party/tbb.h>
@@ -49,13 +50,8 @@ namespace
 	};
 }
 
-renderer::PipelineManager::PipelineManager( Device& device,
-											std::filesystem::path shader_dir,
-											const BindlessManagerBase& bindless_manager,
-											std::filesystem::path shader_cache_dir )
-	: _device( &device )
-	, _bindless_manager( &bindless_manager )
-	, _compiler( std::move( shader_dir ) )
+renderer::PipelineManager::PipelineManager( std::filesystem::path shader_dir, std::filesystem::path shader_cache_dir )
+	: _compiler( std::move( shader_dir ) )
 	, _cache( shader_cache_dir.empty() ? std::unique_ptr<ShaderCache> { } : std::make_unique<ShaderCache>( std::move( shader_cache_dir ) ) )
 	, _rebuild_thread(
 		  [ & ]( std::stop_token tok )
@@ -67,35 +63,52 @@ renderer::PipelineManager::PipelineManager( Device& device,
 			  while ( !tok.stop_requested() )
 			  {
 				  rebuild_job();
-				  if ( !tok.stop_requested() )
-				  {
-					  using namespace std::chrono_literals;
-					  std::this_thread::sleep_for( 100ms );
-				  }
+				  using namespace std::chrono_literals;
+				  std::unique_lock lock( _mtx );
+				  _wake_signal.wait_for( lock, tok, 1s, [ & ] { return _wake_requested; } );
+				  _wake_requested = false;
 			  }
 		  } )
 {
 }
 
+void renderer::PipelineManager::attach( Device& device, const BindlessManagerBase& bindless_manager )
+{
+	{
+		std::unique_lock lock( _mtx );
+		assert( !_device && !_bindless_manager );
+		_device = &device;
+		_bindless_manager = &bindless_manager;
+		_wake_requested = true;
+	}
+	// Wake the rebuild thread immediately so it can start making pipelines available
+	_wake_signal.notify_one();
+}
+
 renderer::PipelineHandle renderer::PipelineManager::add( Pipeline::Desc desc, std::initializer_list<ShaderSource> sources )
 {
-	std::unique_lock lock( _mtx );
-	const PipelineHandle handle { static_cast<uint32_t>( _items.size() ) };
-	auto& entry = _items.emplace_back( std::move( desc ) );
-	entry.sources.reserve( sources.size() );
-	for ( const auto& source : sources )
+	PipelineHandle handle;
 	{
-		// Linear find ain't great but for our amount of shaders it's fine at the moment
-		auto it = std::find_if( begin( _shaders ),
-								end( _shaders ),
-								[ &source ]( const auto& shader ) { return shader.code.get_source() == source; } );
-		if ( it == end( _shaders ) )
+		std::unique_lock lock( _mtx );
+		handle.index = static_cast<uint32_t>( _items.size() );
+		auto& entry = _items.emplace_back( std::move( desc ) );
+		entry.sources.reserve( sources.size() );
+		for ( const auto& source : sources )
 		{
-			_shaders.emplace_back( raii::ShaderCode( source, { } ) );
-			it = end( _shaders ) - 1;
+			// Linear find ain't great but for our amount of shaders it's fine at the moment
+			auto it = std::find_if( begin( _shaders ),
+									end( _shaders ),
+									[ &source ]( const auto& shader ) { return shader.code.get_source() == source; } );
+			if ( it == end( _shaders ) )
+			{
+				_shaders.emplace_back( raii::ShaderCode( source, { } ) );
+				it = end( _shaders ) - 1;
+			}
+			entry.sources.push_back( static_cast<int>( std::distance( begin( _shaders ), it ) ) );
 		}
-		entry.sources.push_back( static_cast<int>( std::distance( begin( _shaders ), it ) ) );
+		_wake_requested = true;
 	}
+	_wake_signal.notify_one();
 	return handle;
 }
 
@@ -164,7 +177,7 @@ renderer::PipelineManager::MakePipelineResult renderer::PipelineManager::make( c
 	}
 }
 
-std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
+void renderer::PipelineManager::rebuild_outdated_shaders()
 {
 	PROFILER_SCOPE();
 	struct RebuildRequest
@@ -194,7 +207,7 @@ std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 	}
 	if ( to_rebuild.empty() )
 	{
-		return { };
+		return;
 	}
 
 	const auto compile = [ & ]( size_t index )
@@ -210,8 +223,6 @@ std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 	tbb::parallel_for( 0zu, to_rebuild.size(), compile );
 #endif
 
-	std::vector<size_t> rebuilt;
-	rebuilt.reserve( to_rebuild.size() );
 	std::unique_lock lock( _mtx );
 	for ( auto& item : to_rebuild )
 	{
@@ -219,7 +230,7 @@ std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 		{
 			_shaders[ item.index ].code = std::move( item.result.value() );
 			_shaders[ item.index ].last_write = item.last_write;
-			rebuilt.emplace_back( item.index );
+			_shaders[ item.index ].dirty = true;
 		}
 		else if ( _shaders[ item.index ].code.get_size() == 0 )
 		{
@@ -232,33 +243,38 @@ std::vector<size_t> renderer::PipelineManager::rebuild_outdated_shaders()
 			_shaders[ item.index ].last_write = item.last_write;
 		}
 	}
-	return rebuilt;
 }
 
 void renderer::PipelineManager::rebuild_job()
 {
 	PROFILER_SCOPE();
-	const auto rebuilt_shaders = rebuild_outdated_shaders();
-	std::vector<const raii::ShaderCode*> shaders;
+	rebuild_outdated_shaders();
 
 	std::unique_lock lock( _mtx );
+	if ( !_device )
+	{
+		// No device attached yet, stop here
+		return;
+	}
+
+	std::vector<const raii::ShaderCode*> shaders;
 	for ( size_t i = 0; i < _items.size(); ++i )
 	{
 		size_t available = 0;
-		int rebuilt = 0;
+		int dirty = 0;
 		for ( const auto source : _items[ i ].sources )
 		{
 			if ( _shaders[ source ].code.get_size() != 0 )
 			{
 				++available;
 			}
-			if ( std::find( begin( rebuilt_shaders ), end( rebuilt_shaders ), source ) != end( rebuilt_shaders ) )
+			if ( _shaders[ source ].dirty )
 			{
-				++rebuilt;
+				++dirty;
 			}
 		}
 		const auto unbuilt_desc = std::get_if<Pipeline::Desc>( &_items[ i ].pipeline );
-		if ( available == _items[ i ].sources.size() && ( unbuilt_desc || rebuilt > 0 ) )
+		if ( available == _items[ i ].sources.size() && ( unbuilt_desc || dirty > 0 ) )
 		{
 			shaders.clear();
 			for ( const auto source : _items[ i ].sources )
@@ -286,6 +302,13 @@ void renderer::PipelineManager::rebuild_job()
 			}
 		}
 	}
+	// Every pipeline that used dirty shader should have been rebuilt now, unless it's missing a component
+	// in which case we aren't skipping a rebuild
+	for ( auto& shader : _shaders )
+	{
+		shader.dirty = false;
+	}
+
 	const bool signal_ready = !_pending_errors.empty() || _available_pipelines == _items.size();
 	lock.unlock();
 

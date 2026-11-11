@@ -32,6 +32,7 @@ namespace renderer
 		{
 			raii::ShaderCode code;
 			std::filesystem::file_time_type last_write;
+			bool dirty = false;
 		};
 
 		struct Item
@@ -43,10 +44,13 @@ namespace renderer
 		using MakePipelineResult = std::expected<raii::Pipeline, Error>;
 
 	public:
-		PipelineManager( Device& device,
-						 std::filesystem::path shader_dir,
-						 const BindlessManagerBase& bindless_manager,
-						 std::filesystem::path shader_cache_dir = { } );
+		// Construct a headless pipeline manager
+		// Pipelines can be added but won't be fully created until a graphics device is given (see attach())
+		PipelineManager( std::filesystem::path shader_dir, std::filesystem::path shader_cache_dir = { } );
+
+		// Attaches a graphics device
+		// Pipelines that were queued for add will be finalized in the next background update
+		void attach( Device& device, const BindlessManagerBase& bindless_manager );
 
 		// Creates and return new pipeline. Safe to call from multiple threads at once.
 		PipelineHandle add( Pipeline::Desc desc, std::initializer_list<ShaderSource> shaders );
@@ -64,11 +68,11 @@ namespace renderer
 
 	private:
 		MakePipelineResult make( const Pipeline::Desc& desc, std::span<const raii::ShaderCode*> shaders ) const;
-		std::vector<size_t> rebuild_outdated_shaders();
+		void rebuild_outdated_shaders();
 		void rebuild_job();
 
-		Device* _device;
-		const BindlessManagerBase* _bindless_manager;
+		Device* _device = nullptr;
+		const BindlessManagerBase* _bindless_manager = nullptr;
 		ShaderCompiler _compiler;
 		std::unique_ptr<ShaderCache> _cache;
 		std::vector<Shader> _shaders;
@@ -76,6 +80,8 @@ namespace renderer
 		// Recursive mtx has higher perf on windows, blame MSVC runtime
 		std::recursive_mutex _mtx;
 		std::condition_variable_any _ready_signal;
+		std::condition_variable_any _wake_signal;
+		bool _wake_requested = false;
 		size_t _available_pipelines = 0;
 		std::vector<Error> _pending_errors;
 		std::unordered_map<size_t, MakePipelineResult> _updated_items;
